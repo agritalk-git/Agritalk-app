@@ -25,20 +25,20 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
   bool loading = false;
 
   final Map<String, String> featureNameMap = {
-    'Precipitation': '降雨量',
-    'Atmospheric Pressure': '大氣壓力',
-    'Soil Temperature': '土壤溫度',
-    'Soil Moisture': '土壤水分張力感測器',
-    'Soil Electrical Conductivity': '土壤電導度',
+    'Precipitation': '時降雨量(mm/h)',
+    'Atmospheric Pressure': '大氣壓力(hPa)',
+    'Soil Temperature': '土壤溫度(°C)',
+    'Soil Moisture': '土壤濕度(%)',
+    'Soil Electrical Conductivity': '土壤電導度(mS/cm)',
     'Potential of Hydrogen': '酸鹼度',
-    'Temperature': '環境溫度',
-    'Humidity': '環境相對濕度',
-    'Luminance': '光照度',
-    'Photosynthetically Active Radiation': '光合作用有效輻射',
-    'Solar Radiation': '太陽輻射度',
-    'Carbon Dioxide': '二氧化碳',
-    'Wind Direction': '風向',
-    'Wind Speed': '風速',
+    'Temperature': '環境溫度(°C)',
+    'Humidity': '環境相對濕度(%)',
+    'Luminance': '照度(lux)',
+    'Photosynthetically Active Radiation': '紅外線強度(lux)',
+    'Solar Radiation': '紫外線(UVI)',
+    'Carbon Dioxide': '二氧化碳(ppm)',
+    'Wind Direction': '風向(°)',
+    'Wind Speed': '風速(m/s)',
   };
 
   final List<String> features = const [
@@ -69,71 +69,74 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
   }
 
   Future<void> _fetchAll() async {
-    setState(() => loading = true);
+  setState(() => loading = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+  final isLoggedIn = token != null && token.isNotEmpty && token != 'GUEST_MODE';
 
-    final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
-    final Map<String, List<ChartData>> nextMyData = {};
+  final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
+  final Map<String, List<ChartData>> nextMyData = {};
 
-    for (final feature in features) {
-      // 先準備此 feature 的群組 series 容器
-      nextGroupSeries[feature] = {};
+  // ✅ feature 層級並行
+  await Future.wait(features.map((feature) async {
+    nextGroupSeries[feature] = {};
 
-      // 逐地點抓群組資料
-      for (final g in groups) {
-        final uuid = g['uuid']!;
-        final label = g['label']!;
+    // ✅ group 層級並行
+    final groupTasks = groups.map((g) async {
+      final uuid = g['uuid']!;
+      final label = g['label']!;
 
-        final data = await apiService.fetchGroupObservation(
-          groupUUID: uuid,
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+      final data = await apiService.fetchGroupObservation(
+        groupUUID: uuid,
+        featureEnglishName: feature,
+        startTime: startTime,
+        endTime: endTime,
+        aggregate: "hours",
+      );
 
-        nextGroupSeries[feature]![label] =
-            (data ?? [])
-                .map<ChartData>(
-                  (item) => ChartData(
-                    DateTime.parse(item['time']),
-                    double.tryParse(item['value'].toString()) ?? 0,
-                  ),
-                )
-                .toList();
-      }
+      final points = (data ?? [])
+          .map<ChartData>((item) => ChartData(
+                DateTime.parse(item['time']),
+                double.tryParse(item['value'].toString()) ?? 0,
+              ))
+          .toList();
 
-      // ✅ 如果已登入，抓「我的資料」
-      if (token != null && token.isNotEmpty && token != 'GUEST_MODE') {
-        final mydata = await apiService.fetchMineRawData(
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+      return MapEntry(label, points);
+    }).toList();
 
-        nextMyData[feature] =
-            (mydata ?? [])
-                .map<ChartData>(
-                  (item) => ChartData(
-                    DateTime.parse(item['time']),
-                    double.tryParse(item['value'].toString()) ?? 0,
-                  ),
-                )
-                .toList();
-      } else {
-        nextMyData[feature] = const [];
-      }
+    final groupResults = await Future.wait(groupTasks);
+    for (final e in groupResults) {
+      nextGroupSeries[feature]![e.key] = e.value;
     }
 
-    setState(() {
-      groupSeriesByFeature = nextGroupSeries;
-      myChartDataMap = nextMyData;
-      loading = false;
-    });
-  }
+    // ✅ 我的資料（同一個 feature 也照抓）
+    if (isLoggedIn) {
+      final mydata = await apiService.fetchMineRawData(
+        featureEnglishName: feature,
+        startTime: startTime,
+        endTime: endTime,
+        aggregate: "hours",
+      );
+
+      nextMyData[feature] = (mydata ?? [])
+          .map<ChartData>((item) => ChartData(
+                DateTime.parse(item['time']),
+                double.tryParse(item['value'].toString()) ?? 0,
+              ))
+          .toList();
+    } else {
+      nextMyData[feature] = const [];
+    }
+  }));
+
+  if (!mounted) return;
+  setState(() {
+    groupSeriesByFeature = nextGroupSeries;
+    myChartDataMap = nextMyData;
+    loading = false;
+  });
+}
 
   Future<void> _selectDate({required bool isStart}) async {
     final picked = await showDatePicker(

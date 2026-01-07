@@ -69,71 +69,75 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
   }
 
   Future<void> _fetchAll() async {
-    setState(() => loading = true);
+  setState(() => loading = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+  final isLoggedIn = token != null && token.isNotEmpty && token != 'GUEST_MODE';
 
-    final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
-    final Map<String, List<ChartData>> nextMyData = {};
+  // 先準備容器
+  final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
+  final Map<String, List<ChartData>> nextMyData = {};
 
-    for (final feature in features) {
-      // 先準備此 feature 的群組 series 容器
-      nextGroupSeries[feature] = {};
+  // 每個 feature 都並行處理
+  await Future.wait(features.map((feature) async {
+    nextGroupSeries[feature] = {};
 
-      // 逐地點抓群組資料
-      for (final g in groups) {
-        final uuid = g['uuid']!;
-        final label = g['label']!;
+    // 1) 這個 feature 的 group 全部並行抓
+    final groupTasks = groups.map((g) async {
+      final uuid = g['uuid']!;
+      final label = g['label']!;
 
-        final data = await apiService.fetchGroupObservation(
-          groupUUID: uuid,
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+      final data = await apiService.fetchGroupObservation(
+        groupUUID: uuid,
+        featureEnglishName: feature,
+        startTime: startTime,
+        endTime: endTime,
+        aggregate: "hours",
+      );
 
-        nextGroupSeries[feature]![label] =
-            (data ?? [])
-                .map<ChartData>(
-                  (item) => ChartData(
-                    DateTime.parse(item['time']),
-                    double.tryParse(item['value'].toString()) ?? 0,
-                  ),
-                )
-                .toList();
-      }
+      final points = (data ?? [])
+          .map<ChartData>((item) => ChartData(
+                DateTime.parse(item['time']),
+                double.tryParse(item['value'].toString()) ?? 0,
+              ))
+          .toList();
 
-      // ✅ 如果已登入，抓「我的資料」
-      if (token != null && token.isNotEmpty && token != 'GUEST_MODE') {
-        final mydata = await apiService.fetchMineRawData(
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+      return MapEntry(label, points);
+    }).toList();
 
-        nextMyData[feature] =
-            (mydata ?? [])
-                .map<ChartData>(
-                  (item) => ChartData(
-                    DateTime.parse(item['time']),
-                    double.tryParse(item['value'].toString()) ?? 0,
-                  ),
-                )
-                .toList();
-      } else {
-        nextMyData[feature] = const [];
-      }
+    final groupResults = await Future.wait(groupTasks);
+    for (final e in groupResults) {
+      nextGroupSeries[feature]![e.key] = e.value;
     }
 
-    setState(() {
-      groupSeriesByFeature = nextGroupSeries;
-      myChartDataMap = nextMyData;
-      loading = false;
-    });
-  }
+    // 2) 這個 feature 的 myData（可選）
+    if (isLoggedIn) {
+      final mydata = await apiService.fetchMineRawData(
+        featureEnglishName: feature,
+        startTime: startTime,
+        endTime: endTime,
+        aggregate: "hours",
+      );
+
+      nextMyData[feature] = (mydata ?? [])
+          .map<ChartData>((item) => ChartData(
+                DateTime.parse(item['time']),
+                double.tryParse(item['value'].toString()) ?? 0,
+              ))
+          .toList();
+    } else {
+      nextMyData[feature] = const [];
+    }
+  }));
+
+  if (!mounted) return;
+  setState(() {
+    groupSeriesByFeature = nextGroupSeries;
+    myChartDataMap = nextMyData;
+    loading = false;
+  });
+}
 
   Future<void> _selectDate({required bool isStart}) async {
     final picked = await showDatePicker(

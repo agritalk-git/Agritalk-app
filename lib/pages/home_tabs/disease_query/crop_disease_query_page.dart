@@ -10,7 +10,7 @@ class CropDiseaseQueryPage extends StatefulWidget {
 }
 
 class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
-  final _cropController = TextEditingController(text: '火龍果');
+  final _cropController = TextEditingController(text: '芭樂');
   final _diseaseApi = DiseaseApiService();
 
   bool _loadingFarms = false;
@@ -148,7 +148,7 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
                   child: TextField(
                     controller: _cropController,
                     decoration: InputDecoration(
-                      labelText: '作物名稱關鍵字，例如：火龍果、芭樂',
+                      labelText: '作物名稱關鍵字，例如：葡萄、芭樂',
                       prefixIcon: const Icon(Icons.agriculture),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
