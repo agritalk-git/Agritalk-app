@@ -241,8 +241,51 @@ class _HomeTabState extends State<HomeTab> {
                     title: e['title'].toString(),
                     image: e['image'].toString(),
                     onTap: () async {
-                      // 你的導航邏輯 그대로
-                    },
+              if (e['url'] != null) {
+                await launchUrl(
+                  Uri.parse(e['url'].toString()),
+                  mode: LaunchMode.externalApplication,
+                );
+              } else {
+                if (e['title'] == '芭樂雲') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GuavaPage()),
+                  );
+                } else if (e['title'] == '葡萄雲') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GrapePage()),
+                  );
+                } else if (e['title'] == '白粉病檢測') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DiseaseAIMainPage()),
+                  );
+                }else if (e['title'] == '用藥查詢') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CropDiseaseQueryPage(),
+                    ),
+                  );
+                }else if (e['title'] == '病蟲害查詢') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DiseaseSearchPage(),
+                    ),
+                  );
+                }else if (e['title'] == '農產品行情') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AgriMarketPage(),
+                    ),
+                  );
+                }
+              }
+            },
                   ),
                 );
               }).toList(),

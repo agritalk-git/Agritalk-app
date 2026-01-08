@@ -883,46 +883,193 @@ final crossAxis = scale >= 1.3 ? 1 : 2; // ✅ 字體大就自動變 1 欄，不
         '$ctrlScheme://$userInfoInUrl$authority/cgi-bin/camctrl/camctrl.cgi';
 
     Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            centerTitle: true,
-            backgroundColor: const Color(0xFF7B4DBB),
-            foregroundColor: Colors.white,
-            title: const Text('攝影機直播'),
-          ),
-          body: Stack(
-            children: [
-              Center(
-                child: AspectRatio(
-                  aspectRatio: 16 / 12,
-                  child: CameraViewer(url: url),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _PtzPad(
-                    controlBase: controlBase,
-                    username: username,
-                    password: password,
+  context,
+  MaterialPageRoute(
+    builder: (_) => _CameraLivePage(
+      url: url,
+      controlBase: controlBase,
+      username: username,
+      password: password,
+    ),
+  ),
+).then((_) {
+  if (mounted) setState(() => _pausedCameras.remove(url));
+});
+
+  }
+}
+
+class _CameraLivePage extends StatefulWidget {
+  final String url;
+  final String controlBase;
+  final String? username;
+  final String? password;
+
+  const _CameraLivePage({
+    required this.url,
+    required this.controlBase,
+    this.username,
+    this.password,
+  });
+
+  @override
+  State<_CameraLivePage> createState() => _CameraLivePageState();
+}
+
+class _CameraLivePageState extends State<_CameraLivePage> {
+  bool _landscapeFullscreen = false;
+
+  // pinch/zoom 控制器
+  final TransformationController _tc = TransformationController();
+
+  // 控制盤預留高度（你可以依手感微調）
+  static const double _padHeight = 230;
+  static const double _padGap = 16;
+
+  Future<void> _restorePortrait() async {
+  // 還原系統 UI
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  // 強制回直向（這一行是關鍵）
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+}
+
+
+  @override
+void dispose() {
+  _restorePortrait(); // ✅ 不管怎樣離開，一定回直向
+  _tc.dispose();
+  super.dispose();
+}
+
+  Future<void> _enterLandscapeFullscreen() async {
+    setState(() => _landscapeFullscreen = true);
+
+    // 橫向 + 隱藏系統列（沉浸）
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  Future<void> _exitFullscreenIfNeeded() async {
+    if (!_landscapeFullscreen) return;
+
+    setState(() => _landscapeFullscreen = false);
+
+    // 還原系統列
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    // 還原允許方向（你也可以只留 portraitUp）
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showPad = !_landscapeFullscreen;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: isLandscape
+      ? null
+      : AppBar(
+          centerTitle: true,
+          backgroundColor: const Color(0xFF7B4DBB),
+          foregroundColor: Colors.white,
+          title: const Text('攝影機直播'),
+          actions: [
+            IconButton(
+              tooltip: _landscapeFullscreen ? '退出全螢幕' : '橫向全螢幕',
+              icon: Icon(_landscapeFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+              onPressed: () async {
+                if (_landscapeFullscreen) {
+                  await _exitFullscreenIfNeeded();
+                } else {
+                  await _enterLandscapeFullscreen();
+                }
+              },
+            ),
+            IconButton(
+              tooltip: '重置縮放',
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _tc.value = Matrix4.identity(),
+            ),
+          ],
+        ),
+      body: Stack(
+        children: [
+          // =========================
+          // 影像區：預留控制盤高度，避免重疊
+          // =========================
+          Positioned.fill(
+            bottom: showPad ? (_padHeight + _padGap) : 0,
+            child: Center(
+              child: ClipRect(
+                child: InteractiveViewer(
+                  transformationController: _tc,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  child: AspectRatio(
+                    aspectRatio: 16 / 12,
+                    child: CameraViewer(url: widget.url),
                   ),
                 ),
               ),
-            ],
+            ),
+          ),
+
+          // =========================
+          // 控制盤：只有非全螢幕才顯示
+          // =========================
+          if (showPad)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: _padGap),
+                  child: SizedBox(
+                    height: _padHeight,
+                    child: _PtzPad(
+                      controlBase: widget.controlBase,
+                      username: widget.username,
+                      password: widget.password,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        
+                if (isLandscape)
+        Positioned(
+          top: 8,
+          left: 8,
+          child: SafeArea(
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
         ),
+
+        ],
       ),
-    ).then((_) {
-      if (mounted) {
-        setState(() => _pausedCameras.remove(url));
-      }
-    });
+    );
   }
+
 }
+
 
 // =========================
 // PTZ Pad (unchanged)

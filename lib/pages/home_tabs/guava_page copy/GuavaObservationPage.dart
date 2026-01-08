@@ -173,10 +173,7 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
               : Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
                       children: [
                         ElevatedButton(

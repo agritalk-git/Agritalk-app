@@ -369,6 +369,9 @@ class ApiService {
       'serialId': serialId,
     };
 
+    print(url);
+    print(body);
+
     final response = await http.post(
       url,
       headers: {

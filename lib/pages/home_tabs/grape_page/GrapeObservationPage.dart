@@ -176,10 +176,7 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
               : Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
                       children: [
                         ElevatedButton(

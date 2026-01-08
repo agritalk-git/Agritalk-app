@@ -177,28 +177,82 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
               : Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => _selectDate(isStart: true),
-                          child: Text(
-                            '開始：${DateFormat('yyyy-MM-dd').format(startTime)}',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () => _selectDate(isStart: false),
-                          child: Text(
-                            '結束：${DateFormat('yyyy-MM-dd').format(endTime)}',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  child: LayoutBuilder(
+    builder: (context, c) {
+      // ✅ 小寬度 / 大字體 → 直接改直向堆疊
+      final bigText = MediaQuery.textScaleFactorOf(context) >= 1.25;
+      final narrow = c.maxWidth < 360;
+      final stackVertical = bigText || narrow;
+
+      final startLabel = '開始：${DateFormat('yyyy-MM-dd').format(startTime)}';
+      final endLabel = '結束：${DateFormat('yyyy-MM-dd').format(endTime)}';
+
+      Widget dateBtn({
+        required VoidCallback onPressed,
+        required IconData icon,
+        required String text,
+      }) {
+        return ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 18),
+          label: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(text),
+          ),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            minimumSize: const Size(0, 44), // ✅ 觸控高度
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          ),
+        );
+      }
+
+      if (stackVertical) {
+        // ✅ 直向：兩顆按鈕疊起來
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            dateBtn(
+              onPressed: () => _selectDate(isStart: true),
+              icon: Icons.calendar_month_rounded,
+              text: startLabel,
+            ),
+            const SizedBox(height: 10),
+            dateBtn(
+              onPressed: () => _selectDate(isStart: false),
+              icon: Icons.event_rounded,
+              text: endLabel,
+            ),
+          ],
+        );
+      }
+
+      // ✅ 橫向：同一排各佔一半
+      return Row(
+        children: [
+          Expanded(
+            child: dateBtn(
+              onPressed: () => _selectDate(isStart: true),
+              icon: Icons.calendar_month_rounded,
+              text: startLabel,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: dateBtn(
+              onPressed: () => _selectDate(isStart: false),
+              icon: Icons.event_rounded,
+              text: endLabel,
+            ),
+          ),
+        ],
+      );
+    },
+  ),
+),
+
                   const Divider(height: 1),
                   Expanded(
                     child: ListView.builder(
