@@ -148,7 +148,7 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
                   child: TextField(
                     controller: _cropController,
                     decoration: InputDecoration(
-                      labelText: '作物名稱關鍵字，例如：葡萄、芭樂',
+                      labelText: '作物名稱關鍵字，例如：葡萄',
                       prefixIcon: const Icon(Icons.agriculture),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),

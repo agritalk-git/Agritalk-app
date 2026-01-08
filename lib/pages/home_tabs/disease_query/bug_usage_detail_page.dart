@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chcg_iot_app/core/api_service.dart';
+import 'package:chcg_iot_app/pages/home_tabs/disease_query/bug_usage_row_detail_page.dart';
 
 class BugUsageDetailPage extends StatefulWidget {
   final String farmCode;
@@ -99,15 +100,19 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
           padding: const EdgeInsets.all(16),
           child: Card(
             elevation: 2,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline,
-                      size: 40, color: Colors.red.shade400),
+                  Icon(
+                    Icons.error_outline,
+                    size: 40,
+                    color: Colors.red.shade400,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     _error!,
@@ -123,7 +128,9 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 10),
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
                     ),
                     onPressed: _fetchDetail,
                     icon: const Icon(Icons.refresh),
@@ -150,34 +157,24 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
     final columns = (_data?['columns'] ?? []) as List<dynamic>;
     final items = (_data?['items'] ?? []) as List<dynamic>;
 
-    return Padding(
+    return ListView(
   padding: const EdgeInsets.all(12),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      _buildSummaryCard(title: title, total: total),
-      const SizedBox(height: 12),
+  children: [
+    _buildSummaryCard(title: title, total: total),
+    const SizedBox(height: 12),
 
-      // 表格區塊（可捲動）
-      Expanded(
-        child: _buildBeautifulTable(columns: columns, items: items),
+    // ✅ table 會自然變長（不會被 Expanded 擠小）
+    _buildBeautifulTable(columns: columns, items: items),
+
+    const SizedBox(height: 8),
+    Align(
+      alignment: Alignment.centerRight,
+      child: Text(
+        '資料來源：農業部動植物防疫檢疫署',
+        style: const TextStyle(fontSize: 11, color: Colors.black54),
       ),
-
-      const SizedBox(height: 8),
-
-      // 資料來源備註
-      Align(
-        alignment: Alignment.centerRight,
-        child: Text(
-          '資料來源：農業部動植物防疫檢疫署',
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.black54,
-          ),
-        ),
-      ),
-    ],
-  ),
+    ),
+  ],
 );
 
   }
@@ -218,17 +215,11 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
                   // 額外資訊：作物名稱 / 病蟲名稱
                   Text(
                     '作物：${widget.cropName}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
                   ),
                   Text(
                     '病蟲：${widget.bugName}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
                   ),
                   if (total != null)
                     Padding(
@@ -244,10 +235,7 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
                   const SizedBox(height: 2),
                   const Text(
                     '以下為官方建議用藥與使用方式，實際仍請依標示與專業人員指導為準。',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.black45,
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.black45),
                   ),
                 ],
               ),
@@ -258,120 +246,128 @@ class _BugUsageDetailPageState extends State<BugUsageDetailPage> {
     );
   }
 
-  /// 美化後的表格：有顏色表頭、斑馬線、可橫向捲動
   Widget _buildBeautifulTable({
-    required List<dynamic> columns,
-    required List<dynamic> items,
-  }) {
-    if (items.isEmpty) {
-      return const Center(
-        child: Text('查無用藥資料', style: TextStyle(color: Colors.grey)),
-      );
-    }
+  required List<dynamic> columns,
+  required List<dynamic> items,
+}) {
+  if (items.isEmpty) {
+    return const Center(
+      child: Text('查無用藥資料', style: TextStyle(color: Colors.grey)),
+    );
+  }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Scrollbar(
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTableTheme(
-              data: DataTableThemeData(
-                headingRowColor:
-                    MaterialStateProperty.all(_primaryColor), // 紫色表頭
-                headingTextStyle: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+  final vCtrl = ScrollController();
+  final hCtrl = ScrollController();
+
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Scrollbar(
+        controller: vCtrl,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: vCtrl,
+          scrollDirection: Axis.vertical, // ✅ 垂直可下拉
+          child: Scrollbar(
+            controller: hCtrl,
+            thumbVisibility: true,
+            notificationPredicate: (n) => n.depth == 1,
+            child: SingleChildScrollView(
+              controller: hCtrl,
+              scrollDirection: Axis.horizontal, // ✅ 水平可左右滑
+              child: DataTableTheme(
+                data: DataTableThemeData(
+                  headingRowColor: MaterialStateProperty.all(_primaryColor),
+                  headingTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  // ✅ 不要寫死 12，讓它跟著系統字體放大
+                  dataTextStyle: const TextStyle(),
+                  dividerThickness: 0.5,
                 ),
-                dataRowColor: MaterialStateProperty.resolveWith(
-                  (states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return const Color(0xFFEDE7F6); // 淺紫
-                    }
-                    return Colors.white;
-                  },
-                ),
-                dataTextStyle: const TextStyle(fontSize: 13),
-                dividerThickness: 0.5,
-              ),
-              child: DataTable(
-                columnSpacing: 16,
-                horizontalMargin: 12,
-                headingRowHeight: 40,
-                dataRowMinHeight: 40,
-                dataRowMaxHeight: 80,
-                columns: columns
-                    .map(
-                      (c) => DataColumn(
-                        label: SizedBox(
-                          width: 120, // 控制欄寬，避免太擠
-                          child: Text(
-                            (c['label'] ?? '').toString(),
-                            softWrap: true,
-                          ),
+                child: DataTable(
+                  showCheckboxColumn: false,
+                  columnSpacing: 14,
+                  horizontalMargin: 12,
+                  headingRowHeight: 44,
+
+                  // ✅ 大字體時避免被切掉：放寬高度
+                  dataRowMinHeight: 56,
+                  dataRowMaxHeight: 140,
+
+                  columns: columns.map<DataColumn>((c) {
+                    final label = (c['label'] ?? '').toString();
+                    return DataColumn(
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 110,
+                          maxWidth: 200,
+                        ),
+                        child: Text(
+                          label,
+                          maxLines: 3, // ✅ 允許標題多行
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
                         ),
                       ),
-                    )
-                    .toList(),
-                rows: List<DataRow>.generate(
-                  items.length,
-                  (index) {
+                    );
+                  }).toList(),
+
+                  rows: List<DataRow>.generate(items.length, (index) {
                     final row = items[index] as Map<String, dynamic>;
-                    final bool isEven = index % 2 == 0;
+                    final isEven = index % 2 == 0;
 
                     return DataRow.byIndex(
                       index: index,
+                      onSelectChanged: (_) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BugUsageRowDetailPage(
+                              columns: columns,
+                              rowData: row,
+                              cropName: widget.cropName,
+                              bugName: widget.bugName,
+                            ),
+                          ),
+                        );
+                      },
                       color: MaterialStateProperty.all(
                         isEven ? const Color(0xFFF7F5FF) : Colors.white,
                       ),
                       cells: columns.map<DataCell>((c) {
                         final key = c['key']?.toString() ?? '';
-                        final value = (row[key] ?? '').toString();
-
-                        // 把比較重要的欄位稍微強調（依實際 key 再調整）
-                        final isImportant = key == 'dose_per_hectare' ||
-                            key == 'dilution_factor' ||
-                            key == 'usage_timing' ||
-                            key == 'pre_harvest_interval';
+                        final value = (row[key] ?? '').toString().trim();
 
                         return DataCell(
                           ConstrainedBox(
                             constraints: const BoxConstraints(
-                              minWidth: 80,
-                              maxWidth: 160,
+                              minWidth: 110,
+                              maxWidth: 240,
                             ),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text(
-                                value.isEmpty ? '-' : value,
-                                softWrap: true,
-                                style: TextStyle(
-                                  fontWeight: isImportant
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  color: isImportant
-                                      ? const Color(0xFF4A148C)
-                                      : Colors.black87,
-                                  fontSize: 13,
-                                ),
-                              ),
+                            child: Text(
+                              value.isEmpty ? '-' : value,
+                              maxLines: 5, // ✅ 大字體給更多行
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
                             ),
                           ),
                         );
                       }).toList(),
                     );
-                  },
+                  }),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+  
 }

@@ -271,7 +271,7 @@ class _FeatureChartState extends State<FeatureChart>
           yValueMapper: (d, _) => d.value,
           width: 2,
           name: '$label',
-          markerSettings: const MarkerSettings(isVisible: false),
+          markerSettings: const MarkerSettings(isVisible: true),
         ),
       );
     });
@@ -285,7 +285,7 @@ class _FeatureChartState extends State<FeatureChart>
           yValueMapper: (d, _) => d.value,
           width: 2,
           name: '我的數據',
-          markerSettings: const MarkerSettings(isVisible: false),
+          markerSettings: const MarkerSettings(isVisible: true),
         ),
       );
     }

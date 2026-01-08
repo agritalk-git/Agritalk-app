@@ -17,7 +17,8 @@ class GrapePage extends StatelessWidget {
         backgroundColor: const Color(0xFF7B4DBB),
         foregroundColor: Colors.white,
       ),
-      body: Column(
+      body: SingleChildScrollView(
+        child: Column(
         children: [
           // ✅ 顯示圖片
           SizedBox(
@@ -174,6 +175,7 @@ class GrapePage extends StatelessWidget {
           ),
         ],
       ),
+      )
     );
   }
 }
