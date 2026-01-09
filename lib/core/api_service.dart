@@ -105,7 +105,9 @@ class ApiService {
     );
 
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body.isNotEmpty ? utf8.decode(res.bodyBytes) : '{}');
+      return jsonDecode(
+        res.body.isNotEmpty ? utf8.decode(res.bodyBytes) : '{}',
+      );
     } else {
       final msg = res.body.isNotEmpty ? res.body : 'Deactivate failed';
       throw Exception(msg);
@@ -151,18 +153,13 @@ class ApiService {
         'Content-Type': 'application/json',
         'accept': 'application/json',
       },
-      body: jsonEncode({
-        'chat_id': chatId,
-        'enabled': enabled,
-      }),
+      body: jsonEncode({'chat_id': chatId, 'enabled': enabled}),
     );
 
     if (res.statusCode == 200) {
       return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     } else {
-      throw Exception(
-        '更新 Telegram 設定失敗：${utf8.decode(res.bodyBytes)}',
-      );
+      throw Exception('更新 Telegram 設定失敗：${utf8.decode(res.bodyBytes)}');
     }
   }
 
@@ -193,7 +190,7 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
-  
+
   Future<List<dynamic>?> fetchdeviceFeatureName(String token) async {
     final url = Uri.parse('$baseUrl/odata/api/v1-Odata/deviceFeatureName');
     final response = await http.get(
@@ -711,8 +708,15 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> fetchAmisHistory(plant_type, plant_code, start_date, end_date) async {
-    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/get_amis_history?plant_type=$plant_type&plant_code=$plant_code&start_date=$start_date&end_date=$end_date');
+  Future<Map<String, dynamic>?> fetchAmisHistory(
+    plant_type,
+    plant_code,
+    start_date,
+    end_date,
+  ) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/get_amis_history?plant_type=$plant_type&plant_code=$plant_code&start_date=$start_date&end_date=$end_date',
+    );
 
     final response = await http.get(
       url,
@@ -727,8 +731,6 @@ class ApiService {
       return null;
     }
   }
-
-  
 
   Future<Map<String, dynamic>?> fetchChatgpt({
     required String groupUUID,
@@ -1095,7 +1097,7 @@ class ApiService {
     return success;
   }
 
-    /// 取得單一 Actuator 的警戒值設定（高於 / 低於）
+  /// 取得單一 Actuator 的警戒值設定（高於 / 低於）
   Future<Map<String, dynamic>?> fetchAlertThreshold({
     required String token,
     required String deviceUUID,
@@ -1111,10 +1113,7 @@ class ApiService {
 
     final res = await http.get(
       url,
-      headers: {
-        'accept': 'application/json',
-        'Authorization': token,
-      },
+      headers: {'accept': 'application/json', 'Authorization': token},
     );
 
     if (res.statusCode == 200) {
@@ -1128,7 +1127,7 @@ class ApiService {
     }
   }
 
-   /// 新增 / 更新警戒值設定（後端用 update_or_create）
+  /// 新增 / 更新警戒值設定（後端用 update_or_create）
   Future<Map<String, dynamic>> alertThresholdAdd({
     required String token,
     required String deviceUUID,
@@ -1165,7 +1164,8 @@ class ApiService {
       throw Exception('新增/更新警戒值失敗：${res.statusCode} ${res.body}');
     }
   }
-   /// 刪除警戒值設定
+
+  /// 刪除警戒值設定
   Future<Map<String, dynamic>> alertThresholdDel({
     required String token,
     required String deviceUUID,
@@ -1181,10 +1181,7 @@ class ApiService {
 
     final res = await http.delete(
       url,
-      headers: {
-        'Authorization': token,
-        'accept': 'application/json',
-      },
+      headers: {'Authorization': token, 'accept': 'application/json'},
     );
 
     if (res.statusCode == 200) {
@@ -1193,7 +1190,8 @@ class ApiService {
       throw Exception('刪除警戒值失敗：${res.statusCode} ${res.body}');
     }
   }
-   /// 取得警戒值觸發歷史紀錄
+
+  /// 取得警戒值觸發歷史紀錄
   Future<List<dynamic>?> fetchAlertHistory({
     required String token,
     required String deviceUUID,
@@ -1211,10 +1209,7 @@ class ApiService {
 
     final res = await http.get(
       url,
-      headers: {
-        'accept': 'application/json',
-        'Authorization': token,
-      },
+      headers: {'accept': 'application/json', 'Authorization': token},
     );
 
     if (res.statusCode == 200) {
@@ -1225,9 +1220,7 @@ class ApiService {
       return null;
     }
   }
-
 }
-
 
 class DiseaseApiService {
   /// .env 裡請加一個，例如：
@@ -1243,9 +1236,7 @@ class DiseaseApiService {
   }
 
   Uri _buildUri(String path, [Map<String, String>? params]) {
-    return Uri.parse('$diseaseURL$path').replace(
-      queryParameters: params,
-    );
+    return Uri.parse('$diseaseURL$path').replace(queryParameters: params);
   }
 
   // ====================== 既有 API ======================
@@ -1335,50 +1326,46 @@ class DiseaseApiService {
   /// 回傳格式：
   /// { "data": [ { "id": ..., "CName": ..., "pic": "完整圖片 URL", ... }, ... ] }
   Future<Map<String, dynamic>?> searchAzaiBugs({
-  required String term,
-  String ty = 'y,y,y,y',
-}) async {
-  final uri = _buildUri('/api/azai/search');
+    required String term,
+    String ty = 'y,y,y,y',
+  }) async {
+    final uri = _buildUri('/api/azai/search');
 
-  print('[DiseaseApiService] POST $uri');
-  print('[DiseaseApiService] body=${{'term': term, 'ty': ty}}');
+    print('[DiseaseApiService] POST $uri');
+    print('[DiseaseApiService] body=${{'term': term, 'ty': ty}}');
 
-  try {
-    final res = await http.post(
-      uri,
-      headers: const {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        // ⭐ 要求伺服器不要用 gzip / br 壓縮
-        'accept-encoding': 'identity',
-      },
-      body: jsonEncode({
-        'term': term,
-        'ty': ty,
-      }),
-    );
+    try {
+      final res = await http.post(
+        uri,
+        headers: const {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          // ⭐ 要求伺服器不要用 gzip / br 壓縮
+          'accept-encoding': 'identity',
+        },
+        body: jsonEncode({'term': term, 'ty': ty}),
+      );
 
-    print('[DiseaseApiService] status=${res.statusCode}');
+      print('[DiseaseApiService] status=${res.statusCode}');
 
-    if (res.statusCode == 200) {
-      final text = utf8.decode(res.bodyBytes);
-      print('[DiseaseApiService] body length=${text.length}');
-      return jsonDecode(text) as Map<String, dynamic>;
-    } else {
-      print('searchAzaiBugs 失敗: ${res.statusCode} ${res.body}');
-      return null;
+      if (res.statusCode == 200) {
+        final text = utf8.decode(res.bodyBytes);
+        print('[DiseaseApiService] body length=${text.length}');
+        return jsonDecode(text) as Map<String, dynamic>;
+      } else {
+        print('searchAzaiBugs 失敗: ${res.statusCode} ${res.body}');
+        return null;
+      }
+    } on http.ClientException catch (e, s) {
+      print('[DiseaseApiService] ClientException: $e');
+      print('$s');
+      rethrow;
+    } catch (e, s) {
+      print('[DiseaseApiService] 其他例外: $e');
+      print('$s');
+      rethrow;
     }
-  } on http.ClientException catch (e, s) {
-    print('[DiseaseApiService] ClientException: $e');
-    print('$s');
-    rethrow;
-  } catch (e, s) {
-    print('[DiseaseApiService] 其他例外: $e');
-    print('$s');
-    rethrow;
   }
-}
-
 
   /// 封裝 /api/azai/bug-pics
   /// 對應 Flask：
@@ -1398,9 +1385,7 @@ class DiseaseApiService {
         'accept': 'application/json',
         'content-type': 'application/json',
       },
-      body: jsonEncode({
-        'bug_id': bugId,
-      }),
+      body: jsonEncode({'bug_id': bugId}),
     );
 
     if (res.statusCode == 200) {
@@ -1429,9 +1414,7 @@ class DiseaseApiService {
         'accept': 'application/json',
         'content-type': 'application/json',
       },
-      body: jsonEncode({
-        'bug_id': bugId,
-      }),
+      body: jsonEncode({'bug_id': bugId}),
     );
 
     if (res.statusCode == 200) {
@@ -1443,29 +1426,30 @@ class DiseaseApiService {
   }
 }
 
-
 class DiseaseAzaiApiService {
   final String _baseUrl =
-      dotenv.env['DISEASE_API_BASE_URL'] ?? 'http://140.113.79.235:10000';
+      dotenv.env['DISEASE_API_BASE_URL'] ?? 'http://61.216.142.83:10000';
 
   // ✅ 直接初始化，不需要 late、不需要建構子
   late final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: _baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 20),
-      headers: const {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-      },
-    ),
-  )
-    ..interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      requestHeader: true,
-      responseHeader: false,
-    ));
+      BaseOptions(
+        baseUrl: _baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: const {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+        },
+      ),
+    )
+    ..interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        requestHeader: true,
+        responseHeader: false,
+      ),
+    );
 
   // -------------------------------
   // 搜尋 API
@@ -1477,10 +1461,7 @@ class DiseaseAzaiApiService {
     try {
       final res = await _dio.post(
         '/api/azai/search',
-        data: {
-          'term': term,
-          'ty': ty,
-        },
+        data: {'term': term, 'ty': ty},
       );
 
       if (res.data is Map<String, dynamic>) {
@@ -1528,4 +1509,160 @@ class DiseaseAzaiApiService {
       rethrow;
     }
   }
+}
+
+class MoaApiService {
+  static const String _baseUrl = 'https://data.moa.gov.tw/api/v1/';
+
+  /// 共用 GET（回傳 DATA list）
+  Future<List<Map<String, dynamic>>> _getList(
+    String path, {
+    Map<String, String>? query,
+  }) async {
+    final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: query);
+
+    final res = await http.get(
+      uri,
+      headers: const {'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      print(body);
+      if (body is Map && body['Data'] is List) {
+        return List<Map<String, dynamic>>.from(body['Data']);
+      }
+      return [];
+    } else {
+      throw Exception('MOA API error [$path]: ${res.statusCode} ${res.body}');
+    }
+  }
+
+  // =========================================================
+  // 作物清單（產品）
+  // GET /CropType/
+  // =========================================================
+  Future<List<Map<String, dynamic>>> fetchCropTypes() {
+    return _getList('CropType/');
+  }
+
+  // =========================================================
+  // 市場清單（你畫面用的 fetchMarkets）
+  // GET /CropMarketType/
+  // =========================================================
+  Future<List<Map<String, dynamic>>> fetchMarkets({
+    required String cropMarketType, // Veg / Fruit / Flower
+  }) {
+    return _getList(
+      'CropMarketType/',
+      query: {'CropMarketType': cropMarketType},
+    );
+  }
+
+  // =========================================================
+  // 交易行情（你畫面用的 fetchTransactions）
+  // GET /AgriProductsTransType/
+  // =========================================================
+  Future<List<Map<String, dynamic>>> fetchTransactions({
+    required String cropCode,
+    required String marketName,
+    required String startDate, // 114/01/01
+    required String endDate, // 114/01/08
+    required String tcType, // Veg / Fruit / Flower
+  }) {
+    // print({
+    //     'CropCode': cropCode,
+    //     'MarketName': marketName, 
+    //     'Start_time': startDate,
+    //     'End_time': endDate,
+    //     'TcType': tcType,
+    //   });
+    return _getList(
+      'AgriProductsTransType/',
+      query: {
+        'CropCode': cropCode,
+        'MarketName': marketName, 
+        'Start_time': startDate,
+        'End_time': endDate,
+        // 'TcType': tcType,
+      },
+    );
+  }
+
+   
+  // =========================================================
+  //台灣地區氣象測站資料
+  /*
+  Data:[
+Start_time(string):時間(起)
+End_time(string):時間(迄)
+Station_name(string):測站名稱
+Station_ID(string):測站編號
+Station_Latitude(number):測站位置緯度(TWD67)
+Station_Longitude(number):測站位置經度(TWD67)
+TIME(string):資料觀測時間
+ELEV(number):高度
+WDIR(integer):風向
+WDSD(number):風速
+TEMP(number):溫度
+HUMD(number):相對濕度
+PRES(number):測站氣壓
+SUN(integer):日照時數
+H_24R(number):日累積雨量
+CITY(string):縣市
+CITY_SN(integer):縣市編號
+TOWN(string):鄉鎮
+TOWN_SN(integer):鄉鎮編號
+]
+  */
+  Future<List<Map<String, dynamic>>> fetchAutoWeatherStationType({
+    required String cropMarketType, // Veg / Fruit / Flower
+  }) {
+    return _getList(
+      'AutoWeatherStationType/'
+    );
+  }
+
+
+  // 台灣地區雨量測站資料
+  /*
+  
+  Data:[
+{
+Start_time(string):時間(起)
+End_time(string):時間(迄)
+Station_name(string):測站名稱
+Station_ID(string):測站編號
+TIME(string):觀測資料時間
+LAT(number):緯度
+LON(number):經度
+ELEV(number):高度
+RAIN(integer):60分鐘累積雨量
+MIN_10(integer):10分鐘累積雨量
+HOUR_3(integer):3小時累積雨量
+HOUR_6(integer):6小時累積雨量
+HOUR_12(integer):12小時累積雨量
+HOUR_24(integer):24小時累積雨量
+NOW(integer):本日累積雨量
+CITY(string):縣市
+CITY_SN(integer):縣市編號
+TOWN(string):鄉鎮
+TOWN_SN(integer):鄉鎮編號
+ATTRIBUTE(string):自動站屬性
+
+}
+]
+  */
+  Future<List<Map<String, dynamic>>> fetchAutoRainfallStationType({
+    required String cropMarketType, // Veg / Fruit / Flower
+  }) {
+    return _getList(
+      'AutoRainfallStationType/'
+    );
+  }
+
+  
+
+  
+
 }

@@ -333,97 +333,134 @@ class _AmisProductDetailPageState extends State<AmisProductDetailPage> {
               ),
             ),
             const SizedBox(height: 6),
-            // 中間：平均價 + 上/中/下（避免 overflow）
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '平均價（元/公斤）',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        avg,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '上：$high   中：$mid   下：$low',
-                        textAlign: TextAlign.right,
-                        softWrap: true,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: deltaBg,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(deltaIcon, size: 18, color: deltaColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                '價較前一日：$priceDelta%',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: deltaColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            // ✅ 中間：完全自適應（不省略、不 overflow）
+LayoutBuilder(
+  builder: (context, c) {
+    final bool narrow = c.maxWidth < 320;
+
+    final left = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '平均價（元/公斤）',
+          style: TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            avg,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
             ),
+          ),
+        ),
+      ],
+    );
+
+    final right = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ✅ 上/中/下：用 Wrap 自動換行
+        Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            _kvText('上', high),
+            _kvText('中', mid),
+            _kvText('下', low),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // ✅ 價較前一日：chip 也用 Wrap，避免擠爆
+        Wrap(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: deltaBg,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(deltaIcon, size: 18, color: deltaColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    '價較前一日：$priceDelta%',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: deltaColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    if (narrow) {
+      // ✅ 窄螢幕：改上下排，100% 不會 overflow
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          left,
+          const SizedBox(height: 10),
+          right,
+        ],
+      );
+    }
+
+    // ✅ 寬度夠：左右排
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 12),
+        Expanded(child: right),
+      ],
+    );
+  },
+),
+
             const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.scale_outlined,
-                    size: 18, color: Colors.grey.shade700),
-                const SizedBox(width: 4),
-                Text(
-                  '交易量：$volume 公斤',
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '量較前一日：$volumeDelta%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            ),
+            Wrap(
+  spacing: 12,
+  runSpacing: 6,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.scale_outlined,
+          size: 18,
+          color: Colors.grey.shade700,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '交易量：$volume 公斤',
+          style: const TextStyle(fontSize: 13),
+        ),
+      ],
+    ),
+
+    Text(
+      '量較前一日：$volumeDelta%',
+      style: TextStyle(
+        fontSize: 12,
+        color: Colors.grey.shade700,
+      ),
+    ),
+  ],
+),
+
           ],
         ),
       ),
@@ -582,3 +619,23 @@ class _AmisProductDetailPageState extends State<AmisProductDetailPage> {
     );
   }
 }
+
+Widget _kvText(String k, String v) {
+  return RichText(
+    text: TextSpan(
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.black87,
+        height: 1.2,
+      ),
+      children: [
+        TextSpan(
+          text: '$k：',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        TextSpan(text: v),
+      ],
+    ),
+  );
+}
+

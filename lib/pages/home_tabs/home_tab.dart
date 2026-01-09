@@ -8,6 +8,7 @@ import 'package:chcg_iot_app/core/api_service.dart';
 import 'package:chcg_iot_app/pages/home_tabs/disease_query/crop_disease_query_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/disease_query/disease_search_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/amis_price_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/weather_station_map_page.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -36,7 +37,6 @@ class _EntryTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           AspectRatio(
-            // ✅ 圖片自適應，不寫死高度
             aspectRatio: 4 / 3,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -44,12 +44,31 @@ class _EntryTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            // maxLines: 2,
-            // overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+
+          // ✅ 文字自適應：可換行、不省略、必要時自動縮小
+          Flexible(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                return FittedBox(
+                  fit: BoxFit.scaleDown, // ✅ 空間不夠就縮小，不用 ...
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: c.maxWidth),
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                      maxLines: 2, // ✅ 最多兩行（不會無限長）
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -192,6 +211,12 @@ class _HomeTabState extends State<HomeTab> {
         'image': 'assets/homepage/258508_0.jpg', // 你可以換成任意已有圖片
         'url': null,
       },
+      {
+        'title': '全台氣象',
+        'subtitle': '全台灣氣象資料',
+        'image': 'assets/homepage/taiwanweather.png', // 你可以換成任意已有圖片
+        'url': null,
+      },
       // {
       //   'title': '白粉病檢測',
       //   'subtitle': '進入白粉病檢測平台',
@@ -219,79 +244,75 @@ class _HomeTabState extends State<HomeTab> {
       // },
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
+    // ✅ 抽成方法，避免 onTap 重複
+  Future<void> handleEntryTap(BuildContext context, Map e) async {
+    final url = e['url'];
 
-        // ✅ 自適應：根據寬度決定一行放幾個
-        int crossAxisCount = 3;
-        if (w >= 420) crossAxisCount = 4;
-        if (w >= 600) crossAxisCount = 5;
+    if (url != null) {
+      await launchUrl(
+        Uri.parse(url.toString()),
+        mode: LaunchMode.externalApplication,
+      );
+      return;
+    }
 
-        final itemWidth = (w - (12 * (crossAxisCount - 1))) / crossAxisCount;
+    final title = e['title']?.toString() ?? '';
 
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children:
-              entries.map((e) {
-                return SizedBox(
-                  width: itemWidth,
-                  child: _EntryTile(
-                    title: e['title'].toString(),
-                    image: e['image'].toString(),
-                    onTap: () async {
-              if (e['url'] != null) {
-                await launchUrl(
-                  Uri.parse(e['url'].toString()),
-                  mode: LaunchMode.externalApplication,
-                );
-              } else {
-                if (e['title'] == '芭樂雲') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GuavaPage()),
-                  );
-                } else if (e['title'] == '葡萄雲') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GrapePage()),
-                  );
-                } else if (e['title'] == '白粉病檢測') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const DiseaseAIMainPage()),
-                  );
-                }else if (e['title'] == '用藥查詢') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CropDiseaseQueryPage(),
-                    ),
-                  );
-                }else if (e['title'] == '病蟲害查詢') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DiseaseSearchPage(),
-                    ),
-                  );
-                }else if (e['title'] == '農產品行情') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AgriMarketPage(),
-                    ),
-                  );
-                }
-              }
-            },
-                  ),
-                );
-              }).toList(),
-        );
-      },
-    );
+    if (title == '芭樂雲') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const GuavaPage()));
+    } else if (title == '葡萄雲') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const GrapePage()));
+    } else if (title == '白粉病檢測') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const DiseaseAIMainPage()));
+    } else if (title == '用藥查詢') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const CropDiseaseQueryPage()));
+    } else if (title == '病蟲害查詢') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const DiseaseSearchPage()));
+    } else if (title == '農產品行情') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const AgriMarketPage()));
+    }
+    else if (title == '全台氣象') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const WeatherStationMapPage()));
+    }
+  }
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final w = constraints.maxWidth;
+
+      // ✅ 依螢幕寬度決定「一頁看起來像幾格」
+      // 你想更密/更疏可以調這裡
+      int visibleCount = 3;      // 手機預設：看起來像 3 格
+      if (w >= 420) visibleCount = 4;
+      if (w >= 600) visibleCount = 5;
+
+      // ✅ item 寬度：讓它像 slider 一樣一行滑
+      // -12 是因為你左右 padding/間距的視覺保留
+      final itemWidth = (w - 12 * (visibleCount - 1)) / visibleCount;
+
+      return SizedBox(
+  height: itemWidth * (3 / 4) + 6 + 52, // ✅ 22 -> 42（保證不爆）
+  child: ListView.separated(
+    scrollDirection: Axis.horizontal,
+    physics: const BouncingScrollPhysics(),
+    itemCount: entries.length,
+    separatorBuilder: (_, __) => const SizedBox(width: 12),
+    itemBuilder: (context, index) {
+      final e = entries[index];
+      return SizedBox(
+        width: itemWidth,
+        child: _EntryTile(
+          title: e['title'].toString(),
+          image: e['image'].toString(),
+          onTap: () => handleEntryTap(context, e),
+        ),
+      );
+    },
+  ),
+);
+
+    },
+  );
   }
 
   Widget _buildNewsSliderAdaptive() {

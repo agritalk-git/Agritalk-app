@@ -3,6 +3,8 @@ import 'package:chcg_iot_app/core/api_service.dart';
 
 // 引入獨立的詳細頁檔案
 import 'package:chcg_iot_app/pages/home_tabs/amis_product_detail_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/agri_market_advanced_page.dart';
+
 
 const Color _primaryColor = Color(0xFF7B4DBB);
 
@@ -73,6 +75,20 @@ class _AgriMarketPageState extends State<AgriMarketPage> {
               Tab(text: '花卉行情'),
             ],
           ),
+          actions: [
+  IconButton(
+    icon: const Icon(Icons.query_stats_rounded),
+    tooltip: '進階行情查詢',
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AgriMarketAdvancedPage(),
+        ),
+      );
+    },
+  ),
+],
         ),
         backgroundColor: const Color(0xFFF4F3FA),
         body: loading
@@ -507,52 +523,51 @@ class _AmisCategoryTabState extends State<AmisCategoryTab> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // 排序控制列
-                  Row(
-                    children: [
-                      const Text(
-                        '排序：',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(width: 8),
-                      ChoiceChip(
-                        label: const Text('市場'),
-                        selected: _sortField == _SortField.market,
-                        onSelected: (_) {
-                          setState(() {
-                            _sortField = _SortField.market;
-                          });
-                          _applyFilter();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      ChoiceChip(
-                        label: const Text('產品'),
-                        selected: _sortField == _SortField.product,
-                        onSelected: (_) {
-                          setState(() {
-                            _sortField = _SortField.product;
-                          });
-                          _applyFilter();
-                        },
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        tooltip: _sortAsc ? '升冪排序' : '降冪排序',
-                        onPressed: () {
-                          setState(() {
-                            _sortAsc = !_sortAsc;
-                          });
-                          _applyFilter();
-                        },
-                        icon: Icon(
-                          _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                          color: _primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  // ✅ 排序控制列：Wrap 自動換行，不會 overflow
+Wrap(
+  spacing: 10,
+  runSpacing: 8,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    const Text(
+      '排序：',
+      style: TextStyle(fontSize: 14),
+    ),
+
+    ChoiceChip(
+      label: const Text('市場'),
+      selected: _sortField == _SortField.market,
+      onSelected: (_) {
+        setState(() => _sortField = _SortField.market);
+        _applyFilter();
+      },
+    ),
+
+    ChoiceChip(
+      label: const Text('產品'),
+      selected: _sortField == _SortField.product,
+      onSelected: (_) {
+        setState(() => _sortField = _SortField.product);
+        _applyFilter();
+      },
+    ),
+
+    // ✅ 升/降冪也放進 Wrap（寬度不夠會自動換行）
+    ActionChip(
+      avatar: Icon(
+        _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+        size: 18,
+        color: _primaryColor,
+      ),
+      label: Text(_sortAsc ? '升冪' : '降冪'),
+      onPressed: () {
+        setState(() => _sortAsc = !_sortAsc);
+        _applyFilter();
+      },
+    ),
+  ],
+),
+],
               ),
             ),
           ],
@@ -691,107 +706,100 @@ class _AmisCategoryTabState extends State<AmisCategoryTab> {
 
               const SizedBox(height: 8),
 
-              // 中間：平均價 + 上/中/下（避免 overflow）
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 左側：平均價
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '平均價（元/公斤）',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          avg,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // 右側：上中下 + 價較前一日
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '上：$high   中：$mid   下：$low',
-                          textAlign: TextAlign.right,
-                          softWrap: true,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: deltaBg,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(deltaIcon, size: 18, color: deltaColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '價較前一日：$priceDelta%',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: deltaColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              // ✅ 中間：平均價 + 上/中/下 + 價較前一日（完全自適應，不省略）
+LayoutBuilder(
+  builder: (context, c) {
+    // 寬度很窄時（例如小螢幕/字體大），改成上下排
+    final bool narrow = c.maxWidth < 320;
+
+    final left = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '平均價（元/公斤）',
+          style: TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            avg,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+
+    final right = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ✅ 用 Wrap 讓「上/中/下」自動換行，不要擠爆
+        Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            _kvText('上', high),
+            _kvText('中', mid),
+            _kvText('下', low),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // ✅ chip 也不要硬靠右擠爆，交給 Wrap 自動換行
+        Wrap(
+          alignment: WrapAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: deltaBg,
+                borderRadius: BorderRadius.circular(999),
               ),
-
-              const SizedBox(height: 8),
-              const Divider(height: 12),
-
-              // 下排：交易量
-              Row(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.scale_outlined,
-                      size: 20, color: Colors.grey.shade700),
-                  const SizedBox(width: 4),
+                  Icon(deltaIcon, size: 18, color: deltaColor),
+                  const SizedBox(width: 6),
                   Text(
-                    '交易量：$volume 公斤',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '量較前一日：$volumeDelta%',
+                    '價較前一日：$priceDelta%',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade700,
+                      color: deltaColor,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
+          ],
+        ),
+      ],
+    );
+
+    if (narrow) {
+      // ✅ 小螢幕：上下排，100% 不會 overflow
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          left,
+          const SizedBox(height: 10),
+          right,
+        ],
+      );
+    }
+
+    // ✅ 寬一點：左右排，但右邊用 Wrap + Expanded 防爆
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 12),
+        Expanded(child: right),
+      ],
+    );
+  },
+),
+],
           ),
         ),
       ),
@@ -805,4 +813,17 @@ String formatToRoc(DateTime dt) {
   final m = dt.month.toString().padLeft(2, '0');
   final d = dt.day.toString().padLeft(2, '0');
   return '$rocYear/$m/$d';
+}
+
+
+Widget _kvText(String k, String v) {
+  return RichText(
+    text: TextSpan(
+      style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.2),
+      children: [
+        TextSpan(text: '$k：', style: const TextStyle(fontWeight: FontWeight.w700)),
+        TextSpan(text: v),
+      ],
+    ),
+  );
 }
