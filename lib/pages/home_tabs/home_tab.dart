@@ -9,6 +9,7 @@ import 'package:chcg_iot_app/pages/home_tabs/disease_query/crop_disease_query_pa
 import 'package:chcg_iot_app/pages/home_tabs/disease_query/disease_search_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/amis_price_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/weather_station_map_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/changhua_disaster_page.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -194,6 +195,12 @@ class _HomeTabState extends State<HomeTab> {
         'url': null,
       },
       {
+        'title': '農作物災害預警',
+        'subtitle': '彰化縣作物防災地圖資料',
+        'image': 'assets/homepage/258507_0.jpg', // 你換成自己有的圖
+        'url': null,
+      },
+      {
         'title': '用藥查詢',
         'subtitle': '用藥查詢',
         'image': 'assets/homepage/258507_0.jpg', // 你可以換成自己有的圖片
@@ -273,6 +280,12 @@ class _HomeTabState extends State<HomeTab> {
     }
     else if (title == '全台氣象') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const WeatherStationMapPage()));
+    }
+    else if (title == '農作物災害預警') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ChanghuaDisasterPage()),
+      );
     }
   }
 

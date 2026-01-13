@@ -691,6 +691,23 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchchanghua_coordinate() async {
+    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/get_changhua_coordinate_list');
+
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data; // ✅ 直接回傳整個 Map
+    } else {
+      print('取得農產品防災資料失敗: ${response.statusCode}');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> fetchAmis() async {
     final url = Uri.parse('$baseUrl/odata/api/v1-Odata/amis');
 
