@@ -366,8 +366,8 @@ class ApiService {
       'serialId': serialId,
     };
 
-    print(url);
-    print(body);
+    // print(url);
+    // print(body);
 
     final response = await http.post(
       url,
@@ -1277,17 +1277,80 @@ class ApiService {
   Future<List<dynamic>> fetchAqxP221Changhua() async {
     // 這個 path 請換成你 Django 真正掛的 endpoint
     // 例如：/odata/api/v1-Odata/aqx_p_221   或 /odata/api/v1-Odata/moenv_air_quality
-    final uri = Uri.parse('$baseUrl/odata/api/v1-Odata/get_aqx_p_221'); // <- 你要改這行
+    final uri = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/get_aqx_p_221',
+    ); // <- 你要改這行
 
-    final resp = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-      },
-    );
+    final resp = await http.get(uri, headers: {'Accept': 'application/json'});
 
     if (resp.statusCode != 200) {
-      throw Exception('fetchAqxP221Changhua failed: ${resp.statusCode} ${resp.body}');
+      throw Exception(
+        'fetchAqxP221Changhua failed: ${resp.statusCode} ${resp.body}',
+      );
+    }
+
+    final decoded = json.decode(utf8.decode(resp.bodyBytes));
+
+    if (decoded is! List) {
+      throw Exception('Unexpected response format (not a list): $decoded');
+    }
+
+    return decoded;
+  }
+
+  /// 取得 CWA 逐 12 小時預報（預設：彰化縣/彰化市）
+  /// Django 建議回傳扁平 dict：
+  /// {
+  ///   county, township, start_time, end_time,
+  ///   weather_description,
+  ///   temp_avg, temp_max, temp_min,
+  ///   apparent_temp_max, apparent_temp_min,
+  ///   relative_humidity, pop_12h,
+  ///   wind_direction, wind_speed,
+  ///   uv_index, uv_level,
+  ///   lat, lon, geocode
+  /// }
+  Future<Map<String, dynamic>> fetchCwaFd0047019({
+    required String county,
+    required String township,
+  }) async {
+    // 這裡假設你 ApiService 已經有 baseUrl 以及 http client
+    // 如果你 ApiService 的實作不同，請把下面改成你原本風格即可。
+    final uri = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/get_cwa_fd0047_019'
+      '?county=${Uri.encodeQueryComponent(county)}'
+      '&township=${Uri.encodeQueryComponent(township)}',
+    );
+
+    final resp = await http.get(uri, headers: {'Accept': 'application/json'});
+
+    if (resp.statusCode != 200) {
+      throw Exception(
+        'fetchCwaFd0047019Raw failed: ${resp.statusCode} ${resp.body}',
+      );
+    }
+
+    final decoded = json.decode(utf8.decode(resp.bodyBytes));
+    if (decoded is! Map) {
+      throw Exception('Unexpected response format (not a map): $decoded');
+    }
+    return decoded.cast<String, dynamic>();
+  }
+
+  /// 取得植物通報
+  Future<List<dynamic>> fetchpest_notice() async {
+    // 這個 path 請換成你 Django 真正掛的 endpoint
+    // 例如：/odata/api/v1-Odata/aqx_p_221   或 /odata/api/v1-Odata/moenv_air_quality
+    final uri = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/get_pest_notice',
+    ); // <- 你要改這行
+
+    final resp = await http.get(uri, headers: {'Accept': 'application/json'});
+
+    if (resp.statusCode != 200) {
+      throw Exception(
+        'fetchAqxP221Changhua failed: ${resp.statusCode} ${resp.body}',
+      );
     }
 
     final decoded = json.decode(utf8.decode(resp.bodyBytes));

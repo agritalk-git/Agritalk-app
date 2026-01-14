@@ -429,11 +429,11 @@ class _SummaryHeader extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 10),
-          const Text(
-            '只顯示黃燈 / 紅燈預警。\n點鄉鎮可查看「哪些作物、哪一種災害」正在警戒。',
-            style: TextStyle(color: Colors.black45, fontSize: 12, height: 1.25),
-          ),
+          // const SizedBox(height: 10),
+          // const Text(
+          //   '只顯示黃燈 / 紅燈預警。\n點鄉鎮可查看「哪些作物、哪一種災害」正在警戒。',
+          //   style: TextStyle(color: Colors.black45, fontSize: 12, height: 1.25),
+          // ),
         ],
       ),
     );

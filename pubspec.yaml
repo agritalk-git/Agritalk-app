@@ -106,6 +106,10 @@ flutter:
     - assets/homepage/258507_0.jpg
     - assets/homepage/258470_0.jpg
     - assets/homepage/taiwanweather.png
+    - assets/homepage/air_quality.png
+    - assets/homepage/ChanghuaDisaster.png
+    - assets/homepage/weather.png
+    - assets/homepage/plant_disease.png
     # - assets/news/pm/pm_poster.png
     # - assets/news/pm/poster.pdf
     

@@ -11,6 +11,8 @@ import 'package:chcg_iot_app/pages/home_tabs/amis_price_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/weather_station_map_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/changhua_disaster_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/air_quality_forecast_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/weather_forecast_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/pest_notice_page.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -202,7 +204,13 @@ class _HomeTabState extends State<HomeTab> {
       {
         'title': '農作物災害預警',
         'subtitle': '彰化縣作物防災地圖資料',
-        'image': 'assets/homepage/258507_0.jpg', // 你換成自己有的圖
+        'image': 'assets/homepage/ChanghuaDisaster.png', // 你換成自己有的圖
+        'url': null,
+      },
+      {
+        'title': '農作物疫情公告',
+        'subtitle': '彰化縣農作物疫情公告',
+        'image': 'assets/homepage/plant_disease.png', // 你換成自己有的圖
         'url': null,
       },
       {
@@ -224,7 +232,13 @@ class _HomeTabState extends State<HomeTab> {
         'url': null,
       },
       {
-        'title': '全台氣象',
+        'title': '天氣預報',
+        'subtitle': '天氣預報',
+        'image': 'assets/homepage/weather.png', // 你可以換成任意已有圖片
+        'url': null,
+      },
+      {
+        'title': '全台氣象站',
         'subtitle': '全台灣氣象資料',
         'image': 'assets/homepage/taiwanweather.png', // 你可以換成任意已有圖片
         'url': null,
@@ -232,7 +246,7 @@ class _HomeTabState extends State<HomeTab> {
       {
         'title': '空氣品質',
         'subtitle': '中部空氣品質',
-        'image': 'assets/homepage/taiwanweather.png', // 你可以換成任意已有圖片
+        'image': 'assets/homepage/air_quality.png', // 你可以換成任意已有圖片
         'url': null,
       },
       // {
@@ -306,7 +320,7 @@ class _HomeTabState extends State<HomeTab> {
           context,
           MaterialPageRoute(builder: (_) => const AgriMarketPage()),
         );
-      } else if (title == '全台氣象') {
+      } else if (title == '全台氣象站') {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const WeatherStationMapPage()),
@@ -321,7 +335,20 @@ class _HomeTabState extends State<HomeTab> {
           context,
           MaterialPageRoute(builder: (_) => const AirQualityForecastPage()),
         );
+      }else if (title == '天氣預報') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WeatherForecastPage()),
+        );
       }
+      else if (title == '農作物疫情公告') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PestNoticePage()),
+        );
+      }
+
+      
     }
 
     return LayoutBuilder(
