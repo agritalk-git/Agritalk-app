@@ -10,6 +10,7 @@ import 'package:chcg_iot_app/pages/home_tabs/disease_query/disease_search_page.d
 import 'package:chcg_iot_app/pages/home_tabs/amis_price_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/weather_station_map_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/changhua_disaster_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/air_quality_forecast_page.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -92,6 +93,8 @@ class _HomeTabState extends State<HomeTab> {
     fetchNewsData();
   }
 
+  
+
   Future<void> fetchNewsData() async {
     try {
       final data = await apiService.fetchNews();
@@ -144,6 +147,8 @@ class _HomeTabState extends State<HomeTab> {
           _buildSectionTitle("訊息中心"),
           const SizedBox(height: 8),
           _buildRankListAdaptive(),
+
+          
         ],
       ),
     );
@@ -224,6 +229,12 @@ class _HomeTabState extends State<HomeTab> {
         'image': 'assets/homepage/taiwanweather.png', // 你可以換成任意已有圖片
         'url': null,
       },
+      {
+        'title': '空氣品質',
+        'subtitle': '中部空氣品質',
+        'image': 'assets/homepage/taiwanweather.png', // 你可以換成任意已有圖片
+        'url': null,
+      },
       // {
       //   'title': '白粉病檢測',
       //   'subtitle': '進入白粉病檢測平台',
@@ -252,80 +263,103 @@ class _HomeTabState extends State<HomeTab> {
     ];
 
     // ✅ 抽成方法，避免 onTap 重複
-  Future<void> handleEntryTap(BuildContext context, Map e) async {
-    final url = e['url'];
+    Future<void> handleEntryTap(BuildContext context, Map e) async {
+      final url = e['url'];
 
-    if (url != null) {
-      await launchUrl(
-        Uri.parse(url.toString()),
-        mode: LaunchMode.externalApplication,
-      );
-      return;
+      if (url != null) {
+        await launchUrl(
+          Uri.parse(url.toString()),
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+
+      final title = e['title']?.toString() ?? '';
+
+      if (title == '芭樂雲') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GuavaPage()),
+        );
+      } else if (title == '葡萄雲') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GrapePage()),
+        );
+      } else if (title == '白粉病檢測') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DiseaseAIMainPage()),
+        );
+      } else if (title == '用藥查詢') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CropDiseaseQueryPage()),
+        );
+      } else if (title == '病蟲害查詢') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DiseaseSearchPage()),
+        );
+      } else if (title == '農產品行情') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AgriMarketPage()),
+        );
+      } else if (title == '全台氣象') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WeatherStationMapPage()),
+        );
+      } else if (title == '農作物災害預警') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ChanghuaDisasterPage()),
+        );
+      } else if (title == '空氣品質') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AirQualityForecastPage()),
+        );
+      }
     }
 
-    final title = e['title']?.toString() ?? '';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
 
-    if (title == '芭樂雲') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const GuavaPage()));
-    } else if (title == '葡萄雲') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const GrapePage()));
-    } else if (title == '白粉病檢測') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const DiseaseAIMainPage()));
-    } else if (title == '用藥查詢') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const CropDiseaseQueryPage()));
-    } else if (title == '病蟲害查詢') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const DiseaseSearchPage()));
-    } else if (title == '農產品行情') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const AgriMarketPage()));
-    }
-    else if (title == '全台氣象') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const WeatherStationMapPage()));
-    }
-    else if (title == '農作物災害預警') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ChanghuaDisasterPage()),
-      );
-    }
-  }
+        // ✅ 依螢幕寬度決定「一頁看起來像幾格」
+        // 你想更密/更疏可以調這裡
+        int visibleCount = 3; // 手機預設：看起來像 3 格
+        if (w >= 420) visibleCount = 4;
+        if (w >= 600) visibleCount = 5;
 
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final w = constraints.maxWidth;
+        // ✅ item 寬度：讓它像 slider 一樣一行滑
+        // -12 是因為你左右 padding/間距的視覺保留
+        final itemWidth = (w - 12 * (visibleCount - 1)) / visibleCount;
 
-      // ✅ 依螢幕寬度決定「一頁看起來像幾格」
-      // 你想更密/更疏可以調這裡
-      int visibleCount = 3;      // 手機預設：看起來像 3 格
-      if (w >= 420) visibleCount = 4;
-      if (w >= 600) visibleCount = 5;
-
-      // ✅ item 寬度：讓它像 slider 一樣一行滑
-      // -12 是因為你左右 padding/間距的視覺保留
-      final itemWidth = (w - 12 * (visibleCount - 1)) / visibleCount;
-
-      return SizedBox(
-  height: itemWidth * (3 / 4) + 6 + 52, // ✅ 22 -> 42（保證不爆）
-  child: ListView.separated(
-    scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
-    itemCount: entries.length,
-    separatorBuilder: (_, __) => const SizedBox(width: 12),
-    itemBuilder: (context, index) {
-      final e = entries[index];
-      return SizedBox(
-        width: itemWidth,
-        child: _EntryTile(
-          title: e['title'].toString(),
-          image: e['image'].toString(),
-          onTap: () => handleEntryTap(context, e),
-        ),
-      );
-    },
-  ),
-);
-
-    },
-  );
+        return SizedBox(
+          height: itemWidth * (3 / 4) + 6 + 52, // ✅ 22 -> 42（保證不爆）
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: entries.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final e = entries[index];
+              return SizedBox(
+                width: itemWidth,
+                child: _EntryTile(
+                  title: e['title'].toString(),
+                  image: e['image'].toString(),
+                  onTap: () => handleEntryTap(context, e),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildNewsSliderAdaptive() {
@@ -568,36 +602,45 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                             const SizedBox(height: 4),
                             Wrap(
-  spacing: 8,
-  runSpacing: 6,
-  crossAxisAlignment: WrapCrossAlignment.center,
-  children: [
-    Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.event, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(
-          date,
-          style: const TextStyle(color: Colors.grey),
-        ),
-      ],
-    ),
-    if (tag.isNotEmpty)
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: _primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          tag,
-          style: TextStyle(color: _primaryColor),
-        ),
-      ),
-  ],
-),
-],
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.event,
+                                      size: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      date,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (tag.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      tag,
+                                      style: TextStyle(color: _primaryColor),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -614,4 +657,6 @@ class _HomeTabState extends State<HomeTab> {
           }).toList(),
     );
   }
+
+  
 }

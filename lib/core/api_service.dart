@@ -692,7 +692,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>?> fetchchanghua_coordinate() async {
-    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/get_changhua_coordinate_list');
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/get_changhua_coordinate_list',
+    );
 
     final response = await http.get(
       url,
@@ -1237,6 +1239,65 @@ class ApiService {
       return null;
     }
   }
+
+  /// 取得 空氣品質
+  Future<Map<String, dynamic>?> fetchAqfCentral({
+    String language = 'zh',
+  }) async {
+    final uri = Uri.parse('$baseUrl/odata/api/v1-Odata/get_aqf_p_01').replace(
+      queryParameters: {
+        'language': language,
+        // 你後端已經去掉 limit，所以不用傳 limit
+      },
+    );
+
+    try {
+      final resp = await http
+          .get(uri, headers: {'accept': '*/*'})
+          .timeout(const Duration(seconds: 12));
+
+      if (resp.statusCode != 200) {
+        // 可能 404（沒找到中部）/ 502 / 504 等
+        return {'error': true, 'status': resp.statusCode, 'body': resp.body};
+      }
+
+      final decoded = jsonDecode(utf8.decode(resp.bodyBytes));
+
+      // 你的後端是回傳「單一物件」(Map) 或 404 message
+      if (decoded is Map<String, dynamic>) return decoded;
+
+      // 意外格式
+      return {'error': true, 'message': 'Unexpected response format'};
+    } catch (e) {
+      return {'error': true, 'message': e.toString()};
+    }
+  }
+
+  /// 取得 空氣221品質
+  Future<List<dynamic>> fetchAqxP221Changhua() async {
+    // 這個 path 請換成你 Django 真正掛的 endpoint
+    // 例如：/odata/api/v1-Odata/aqx_p_221   或 /odata/api/v1-Odata/moenv_air_quality
+    final uri = Uri.parse('$baseUrl/odata/api/v1-Odata/get_aqx_p_221'); // <- 你要改這行
+
+    final resp = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+      },
+    );
+
+    if (resp.statusCode != 200) {
+      throw Exception('fetchAqxP221Changhua failed: ${resp.statusCode} ${resp.body}');
+    }
+
+    final decoded = json.decode(utf8.decode(resp.bodyBytes));
+
+    if (decoded is! List) {
+      throw Exception('Unexpected response format (not a list): $decoded');
+    }
+
+    return decoded;
+  }
 }
 
 class DiseaseApiService {
@@ -1589,7 +1650,7 @@ class MoaApiService {
   }) {
     // print({
     //     'CropCode': cropCode,
-    //     'MarketName': marketName, 
+    //     'MarketName': marketName,
     //     'Start_time': startDate,
     //     'End_time': endDate,
     //     'TcType': tcType,
@@ -1598,7 +1659,7 @@ class MoaApiService {
       'AgriProductsTransType/',
       query: {
         'CropCode': cropCode,
-        'MarketName': marketName, 
+        'MarketName': marketName,
         'Start_time': startDate,
         'End_time': endDate,
         // 'TcType': tcType,
@@ -1606,7 +1667,6 @@ class MoaApiService {
     );
   }
 
-   
   // =========================================================
   //台灣地區氣象測站資料
   /*
@@ -1635,11 +1695,8 @@ TOWN_SN(integer):鄉鎮編號
   Future<List<Map<String, dynamic>>> fetchAutoWeatherStationType({
     required String cropMarketType, // Veg / Fruit / Flower
   }) {
-    return _getList(
-      'AutoWeatherStationType/'
-    );
+    return _getList('AutoWeatherStationType/');
   }
-
 
   // 台灣地區雨量測站資料
   /*
@@ -1673,13 +1730,6 @@ ATTRIBUTE(string):自動站屬性
   Future<List<Map<String, dynamic>>> fetchAutoRainfallStationType({
     required String cropMarketType, // Veg / Fruit / Flower
   }) {
-    return _getList(
-      'AutoRainfallStationType/'
-    );
+    return _getList('AutoRainfallStationType/');
   }
-
-  
-
-  
-
 }
