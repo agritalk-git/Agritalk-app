@@ -387,6 +387,65 @@ class ApiService {
     }
   }
 
+    /// ✅ 脈衝控制：先 ON（或你給的 value）→ N 秒後自動反向
+  ///
+  /// 後端：POST /odata/api/v1-Odata/Settings/pulse/
+  /// body:
+  /// {
+  ///   deviceUUID,
+  ///   featureEnglishName,
+  ///   value: "ON"/"OFF",
+  ///   serialId,
+  ///   duration_seconds
+  /// }
+  Future<Map<String, dynamic>> pulseSetting({
+    required String deviceUUID,
+    required String featureEnglishName,
+    required String serialId,
+    required bool turnOnFirst, // true=先ON; false=先OFF
+    required int durationSeconds,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('No token found');
+    }
+    if (durationSeconds <= 0) {
+      throw Exception('durationSeconds 必須 > 0');
+    }
+
+    // ✅ 注意：這個 path 依你 router 而定
+    // 若你後端實際是 /setting/pulse/ 或 /Settings/pulse/，就改這行
+    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/Settings/pulse');
+
+    final body = {
+      'deviceUUID': deviceUUID,
+      'featureEnglishName': featureEnglishName,
+      'value': turnOnFirst ? 'ON' : 'OFF',
+      'serialId': serialId,
+      'duration_seconds': durationSeconds,
+    };
+
+    final res = await http.post(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Authorization': token,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'pulseSetting 失敗: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
   /// 查詢所有 GroupDevices（包含底下 Devices 資訊）
   Future<List<dynamic>?> fetchGroupDevices(String token) async {
     final url = Uri.parse('$baseUrl/odata/api/v1-Odata/GroupDevices');

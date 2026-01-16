@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:chcg_iot_app/pages/home_tabs/TimeControlTab.dart';
 import 'package:chcg_iot_app/pages/home_tabs/ConditionControlTab.dart';
 import 'package:chcg_iot_app/pages/home_tabs/CycleControlTab.dart';
+import 'package:chcg_iot_app/pages/home_tabs/PulseControlTab.dart';
 class AutoControlPage extends StatefulWidget {
   final Object obs; 
   final String deviceUUID;
@@ -46,6 +47,11 @@ class _AutoControlPageState extends State<AutoControlPage> {
         featureEnglishName: widget.featureEnglishName,
         serialId: widget.serialId,
       ),
+      PulseControlTab( // ✅ 新增
+        deviceUUID: widget.deviceUUID,
+        featureEnglishName: widget.featureEnglishName,
+        serialId: widget.serialId,
+      ),
     ];
   }
 
@@ -72,6 +78,7 @@ class _AutoControlPageState extends State<AutoControlPage> {
           });
         },
         destinations: const [
+          
           NavigationDestination(
             icon: Icon(Icons.access_time),
             label: "定時控制",
@@ -83,6 +90,10 @@ class _AutoControlPageState extends State<AutoControlPage> {
           NavigationDestination(
             icon: Icon(Icons.cloud),
             label: "循環控制",
+          ),
+          NavigationDestination( // ✅ 新增
+            icon: Icon(Icons.flash_on),
+            label: "秒數控制",
           ),
         ],
       ),

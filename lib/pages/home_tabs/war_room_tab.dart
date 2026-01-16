@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chcg_iot_app/core/api_service.dart';
-import 'package:chcg_iot_app/pages/home_tabs/dashboard.dart';
+import 'package:chcg_iot_app/pages/home_tabs/dashboard/dashboard_page.dart';
 import 'dart:ui';
 
 class WarRoomTab extends StatefulWidget {
