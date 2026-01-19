@@ -430,9 +430,10 @@ class _ActuatorSwitchState extends State<_ActuatorSwitch> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Align(
+      alignment: Alignment.centerLeft,
       child: Wrap(
-        alignment: WrapAlignment.center,
+        alignment: WrapAlignment.start,
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 10,
         runSpacing: 6,
