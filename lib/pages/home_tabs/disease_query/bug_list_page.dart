@@ -6,10 +6,12 @@ class BugListPage extends StatefulWidget {
   const BugListPage({
     super.key,
     required this.farmParam,
+    required this.bug,
   });
 
   /// 例： "101,102,103"
   final String farmParam;
+  final String bug;
 
   @override
   State<BugListPage> createState() => _BugListPageState();
@@ -38,7 +40,7 @@ class _BugListPageState extends State<BugListPage> {
     });
 
     try {
-      final res = await _api.fetchBugFarmList(farm: widget.farmParam);
+      final res = await _api.fetchBugFarmList(farm: widget.farmParam, bug:widget.bug);
       final items = (res?['items'] ?? []) as List<dynamic>;
 
       if (!mounted) return;

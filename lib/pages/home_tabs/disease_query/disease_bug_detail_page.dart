@@ -429,3 +429,5 @@ class _BugDetailData {
     required this.pics,
   });
 }
+
+

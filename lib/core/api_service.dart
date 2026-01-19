@@ -1460,6 +1460,22 @@ class DiseaseApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchBugs({String bug = '炭疽病'}) async {
+    final uri = _buildUri('/api/bugs', {'bug': bug});
+
+    final res = await http.get(
+      uri,
+      headers: const {'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      print('fetchBugs 失敗: ${res.statusCode} ${res.body}');
+      return null;
+    }
+  }
+
   /// 封裝 /api/bug-farm-list
   /// 對應 Flask：
   /// GET /api/bug-farm-list?farm=E215901,D135901&flag=&bug=&userange=
