@@ -846,8 +846,8 @@ List<_InsightChip> _buildInsights({
 }) {
   final chips = <_InsightChip>[];
 
-  double hi = stats.avg + stats.sd;
-  double lo = stats.avg - stats.sd;
+  final double hi = (stats.avg + stats.sd).toDouble();
+  final double lo = (stats.avg - stats.sd).toDouble();
 
   int consecAbove(double thr) {
     int best = 0, cur = 0;
@@ -877,18 +877,19 @@ List<_InsightChip> _buildInsights({
 
   switch (feature) {
     case 'Humidity': {
-      // 相對高濕 + 保守絕對高濕
-      final thr = math.max(hi, 85);
-      final hours = consecAbove(thr);
+      // ✅ math.max 回傳 num → 轉 double
+      final double thr = math.max<double>(hi, 85.0);
+      final int hours = consecAbove(thr);
+
       if (hours >= 6) {
         chips.add(_InsightChip('高濕連續 $hours 小時（病害風險↑）', Icons.water_drop_outlined, const Color(0xFFE3F2FD)));
       } else if (stats.latest >= thr) {
         chips.add(_InsightChip('目前偏高濕（注意葉面不易乾）', Icons.water_drop_outlined, const Color(0xFFE3F2FD)));
       }
 
-      // 低濕（乾熱/蒸散上升）
-      final lowThr = math.min(lo, 45);
-      final lowHours = consecBelow(lowThr);
+      final double lowThr = math.min<double>(lo, 45.0);
+      final int lowHours = consecBelow(lowThr);
+
       if (lowHours >= 6) {
         chips.add(_InsightChip('偏低濕連續 $lowHours 小時（蒸散↑）', Icons.air, const Color(0xFFFFF3E0)));
       }
@@ -896,17 +897,17 @@ List<_InsightChip> _buildInsights({
     }
 
     case 'Temperature': {
-      final highThr = math.max(hi, 32);
-      final lowThr = math.min(lo, 12);
+      final double highThr = math.max<double>(hi, 32.0);
+      final double lowThr = math.min<double>(lo, 12.0);
 
-      final highHours = consecAbove(highThr);
+      final int highHours = consecAbove(highThr);
       if (highHours >= 6) {
         chips.add(_InsightChip('偏高溫連續 $highHours 小時（熱壓力↑）', Icons.local_fire_department_outlined, const Color(0xFFFFEBEE)));
       } else if (stats.latest >= highThr) {
         chips.add(_InsightChip('目前偏高溫（注意遮陰/補水）', Icons.local_fire_department_outlined, const Color(0xFFFFEBEE)));
       }
 
-      final lowHours = consecBelow(lowThr);
+      final int lowHours = consecBelow(lowThr);
       if (lowHours >= 6) {
         chips.add(_InsightChip('偏低溫連續 $lowHours 小時（生長放緩）', Icons.ac_unit_outlined, const Color(0xFFE8EAF6)));
       }
@@ -914,7 +915,6 @@ List<_InsightChip> _buildInsights({
     }
 
     case 'Precipitation': {
-      // 雨量：看最新 & 近6小時累積
       double sum6h = 0;
       final now = points.isNotEmpty ? points.last.time : DateTime.now();
       for (final p in points) {
@@ -922,27 +922,26 @@ List<_InsightChip> _buildInsights({
           sum6h += p.value;
         }
       }
-      if (stats.latest >= 1) {
+      if (stats.latest >= 1.0) {
         chips.add(_InsightChip('目前有降雨（雨後病害風險↑）', Icons.umbrella_outlined, const Color(0xFFE3F2FD)));
-      } else if (sum6h >= 5) {
+      } else if (sum6h >= 5.0) {
         chips.add(_InsightChip('近6小時累積降雨 ${sum6h.toStringAsFixed(1)} mm', Icons.umbrella_outlined, const Color(0xFFE3F2FD)));
       }
       break;
     }
 
     case 'Soil Moisture': {
-      // 相對偏乾/偏濕
-      final dryThr = lo;
-      final wetThr = hi;
+      final double dryThr = lo;
+      final double wetThr = hi;
 
-      final dryHours = consecBelow(dryThr);
+      final int dryHours = consecBelow(dryThr);
       if (dryHours >= 6) {
         chips.add(_InsightChip('土壤偏乾連續 $dryHours 小時（灌溉評估）', Icons.grass_outlined, const Color(0xFFFFF3E0)));
       } else if (stats.latest <= dryThr) {
         chips.add(_InsightChip('目前偏乾（注意忽乾忽濕）', Icons.grass_outlined, const Color(0xFFFFF3E0)));
       }
 
-      final wetHours = consecAbove(wetThr);
+      final int wetHours = consecAbove(wetThr);
       if (wetHours >= 6) {
         chips.add(_InsightChip('土壤偏濕連續 $wetHours 小時（排水注意）', Icons.waves_outlined, const Color(0xFFE8F5E9)));
       }
@@ -950,8 +949,7 @@ List<_InsightChip> _buildInsights({
     }
 
     case 'Soil Electrical Conductivity': {
-      // EC 偏高：相對 + 一個保守提示
-      final highThr = math.max(hi, 2.5); // 只是提示用，不當成標準
+      final double highThr = math.max<double>(hi, 2.5);
       if (stats.latest >= highThr) {
         chips.add(_InsightChip('EC 偏高（肥/鹽濃度可能偏高）', Icons.science_outlined, const Color(0xFFFFF8E1)));
       }
@@ -959,7 +957,6 @@ List<_InsightChip> _buildInsights({
     }
 
     case 'Potential of Hydrogen': {
-      // pH：用常見農業粗略界線做提示（不當成硬標準）
       if (stats.latest < 5.5) {
         chips.add(_InsightChip('pH 偏酸（養分有效性可能受影響）', Icons.warning_amber_rounded, const Color(0xFFFFF8E1)));
       } else if (stats.latest > 7.5) {
@@ -969,8 +966,7 @@ List<_InsightChip> _buildInsights({
     }
 
     case 'Solar Radiation': {
-      // UVI 偏高：用相對 + 保守絕對
-      final thr = math.max(hi, 8);
+      final double thr = math.max<double>(hi, 8.0);
       if (stats.latest >= thr) {
         chips.add(_InsightChip('紫外線偏強（曝曬壓力↑）', Icons.wb_sunny_outlined, const Color(0xFFFFF3E0)));
       }
@@ -978,7 +974,6 @@ List<_InsightChip> _buildInsights({
     }
 
     default: {
-      // 通用：偏高/偏低（相對）
       if (stats.latest >= hi) {
         chips.add(_InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)));
       } else if (stats.latest <= lo) {
