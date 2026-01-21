@@ -37,108 +37,115 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _listMode = true;
 
   // ✅ 訂閱狀態快取（deviceUUID -> subscribed）
-  final Map<String, bool> _subscribedMap = {};   // deviceUUID -> subscribed
-final Set<String> _subLoadingSet = {};         // 避免同一台狂點
+  final Map<String, bool> _subscribedMap = {}; // deviceUUID -> subscribed
+  final Set<String> _subLoadingSet = {}; // 避免同一台狂點
 
-Future<void> _refreshSubscribeStates() async {
-  try {
+  Future<void> _refreshSubscribeStates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null || token.isEmpty || token == 'GUEST_MODE') {
+        if (!mounted) return;
+        setState(() => _subscribedMap.clear());
+        return;
+      }
+
+      final Map<String, bool> map = {};
+
+      for (final d in _devices) {
+        final duuid = (d['deviceUUID'] ?? '').toString();
+        if (duuid.isEmpty) continue;
+
+        try {
+          final status = await apiService.getDeviceSubscribeStatus(
+            token: token,
+            key: duuid,
+          );
+          print(status);
+          map[duuid] = (status['subscribed'] == true);
+        } catch (_) {
+          map[duuid] = false;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _subscribedMap
+          ..clear()
+          ..addAll(map);
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleSubscribe(dynamic device) async {
+    final deviceUUID = (device['deviceUUID'] ?? '').toString();
+    if (deviceUUID.isEmpty) return;
+
+    if (_subLoadingSet.contains(deviceUUID)) return;
+    _subLoadingSet.add(deviceUUID);
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
     if (token == null || token.isEmpty || token == 'GUEST_MODE') {
-      if (!mounted) return;
-      setState(() => _subscribedMap.clear());
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('請先登入才能訂閱裝置推播')));
+      }
+      _subLoadingSet.remove(deviceUUID);
       return;
     }
 
-    final Map<String, bool> map = {};
+    final current = _subscribedMap[deviceUUID] ?? false;
+    final next = !current;
 
-    for (final d in _devices) {
-      final duuid = (d['deviceUUID'] ?? '').toString();
-      if (duuid.isEmpty) continue;
+    // ✅ 樂觀更新
+    if (mounted) setState(() => _subscribedMap[deviceUUID] = next);
 
-      try {
-        final status = await apiService.getDeviceSubscribeStatus(
-          token: token,
-          key: duuid,
-        );
-        map[duuid] = (status['subscribed'] == true);
-      } catch (_) {
-        map[duuid] = false;
+    try {
+      await apiService.subscribeDevice(
+        token: token,
+        key: deviceUUID,
+        enabled: next,
+        notifyOnControl: next,
+        channel: "FCM",
+        targetUUID: widget.targetUUID,
+      );
+
+      // ✅ POST 後再 GET 一次確認（避免不同裝置/不同手機狀態不一致）
+      final status = await apiService.getDeviceSubscribeStatus(
+        token: token,
+        key: deviceUUID,
+      );
+      
+
+      final subscribed = (status['subscribed'] == true);
+
+      if (!mounted) return;
+      setState(() => _subscribedMap[deviceUUID] = subscribed);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(subscribed ? '已訂閱推播' : '已取消訂閱')));
+    } catch (e) {
+      // ❌ 失敗還原
+      if (mounted) {
+        setState(() => _subscribedMap[deviceUUID] = current);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('訂閱失敗: $e')));
       }
+    } finally {
+      _subLoadingSet.remove(deviceUUID);
     }
-
-    if (!mounted) return;
-    setState(() {
-      _subscribedMap
-        ..clear()
-        ..addAll(map);
-    });
-  } catch (_) {}
-}
-
-  
-  Future<void> _toggleSubscribe(dynamic device) async {
-  final deviceUUID = (device['deviceUUID'] ?? '').toString();
-  if (deviceUUID.isEmpty) return;
-
-  if (_subLoadingSet.contains(deviceUUID)) return;
-  _subLoadingSet.add(deviceUUID);
-
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token');
-
-  if (token == null || token.isEmpty || token == 'GUEST_MODE') {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請先登入才能訂閱裝置推播')),
-      );
-    }
-    _subLoadingSet.remove(deviceUUID);
-    return;
   }
 
-  final current = _subscribedMap[deviceUUID] ?? false;
-  final next = !current;
-
-  // ✅ 樂觀更新
-  if (mounted) setState(() => _subscribedMap[deviceUUID] = next);
-
-  try {
-    await apiService.subscribeDevice(
-      token: token,
-      key: deviceUUID,
-      enabled: next,
-      notifyOnControl: true,
-      channel: "FCM",
-      targetUUID: widget.targetUUID,
-    );
-
-    // ✅ POST 後再 GET 一次確認（避免不同裝置/不同手機狀態不一致）
-    final status = await apiService.getDeviceSubscribeStatus(
-      token: token,
-      key: deviceUUID,
-    );
-
-    final subscribed = (status['subscribed'] == true);
-
-    if (!mounted) return;
-    setState(() => _subscribedMap[deviceUUID] = subscribed);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(subscribed ? '已訂閱推播' : '已取消訂閱')),
-    );
-  } catch (e) {
-    // ❌ 失敗還原
-    if (mounted) {
-      setState(() => _subscribedMap[deviceUUID] = current);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('訂閱失敗: $e')),
-      );
-    }
-  } finally {
-    _subLoadingSet.remove(deviceUUID);
-  }
+  bool _deviceHasActuator(dynamic device) {
+  final List obs = (device['observationlatest'] as List?) ?? [];
+  return obs.any((o) =>
+      (o['style'] ?? '').toString().toLowerCase() == 'actuator');
 }
 
   @override
@@ -211,7 +218,6 @@ Future<void> _refreshSubscribeStates() async {
       });
 
       await _refreshSubscribeStates();
-
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -366,21 +372,27 @@ Future<void> _refreshSubscribeStates() async {
                 ),
                 // ✅ 訂閱按鈕
                 Builder(builder: (_) {
-                  final duuid = (device['deviceUUID'] ?? '').toString();
-                  final subscribed = _subscribedMap[duuid] ?? false;
+  // ✅ 沒有 actuator 就不顯示
+  if (!_deviceHasActuator(device)) {
+    return const SizedBox.shrink();
+  }
 
-                  return IconButton(
-                    tooltip: subscribed ? '取消訂閱推播' : '訂閱推播',
-                    icon: Icon(
-                      subscribed
-                          ? Icons.notifications_active_rounded
-                          : Icons.notifications_off_rounded,
-                      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
-                      size: 6.w,
-                    ),
-                    onPressed: () => _toggleSubscribe(device),
-                  );
-                }),
+  final duuid = (device['deviceUUID'] ?? '').toString();
+  final subscribed = _subscribedMap[duuid] ?? false;
+
+  return IconButton(
+    tooltip: subscribed ? '取消訂閱推播' : '訂閱推播',
+    icon: Icon(
+      subscribed
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_rounded,
+      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
+      size: 6.w,
+    ),
+    onPressed: () => _toggleSubscribe(device),
+  );
+}),
+
               ],
             ),
             SizedBox(height: 0.6.h),
@@ -513,20 +525,26 @@ Future<void> _refreshSubscribeStates() async {
                   ),
                 ),
                 Builder(builder: (_) {
-                  final duuid = (device['deviceUUID'] ?? '').toString();
-                  final subscribed = _subscribedMap[duuid] ?? false;
+  // ✅ 沒有 actuator 就不顯示
+  if (!_deviceHasActuator(device)) {
+    return const SizedBox.shrink();
+  }
 
-                  return IconButton(
-                    tooltip: subscribed ? '取消訂閱推播' : '訂閱推播',
-                    icon: Icon(
-                      subscribed
-                          ? Icons.notifications_active_rounded
-                          : Icons.notifications_off_rounded,
-                      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
-                    ),
-                    onPressed: () => _toggleSubscribe(device),
-                  );
-                }),
+  final duuid = (device['deviceUUID'] ?? '').toString();
+  final subscribed = _subscribedMap[duuid] ?? false;
+
+  return IconButton(
+    tooltip: subscribed ? '取消訂閱推播' : '訂閱推播',
+    icon: Icon(
+      subscribed
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_rounded,
+      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
+    ),
+    onPressed: () => _toggleSubscribe(device),
+  );
+}),
+
               ],
             ),
           ),
