@@ -22,10 +22,32 @@ Future main() async {
   await Firebase.initializeApp();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await FirebaseMessaging.instance.requestPermission();
+  final messaging = FirebaseMessaging.instance;
 
-  String? token = await FirebaseMessaging.instance.getToken();
-  print('✅ FCM Token: $token');
+// 1) iOS 先請權限
+await messaging.requestPermission(alert: true, badge: true, sound: true);
+final settings = await FirebaseMessaging.instance.requestPermission(
+  alert: true,
+  badge: true,
+  sound: true,
+);
+
+print('🔔 notification permission: ${settings.authorizationStatus}');
+
+
+
+// 2) iOS 等 APNS token 就緒（Android 也不會壞）
+String? apnsToken;
+for (int i = 0; i < 10; i++) {
+  apnsToken = await messaging.getAPNSToken();
+  if (apnsToken != null) break;
+  await Future.delayed(const Duration(milliseconds: 500));
+}
+print('🍎 APNS token: $apnsToken');
+
+// 3) 再拿 FCM token
+String? token = await messaging.getToken();
+print('✅ FCM Token: $token');
 
   final prefs = await SharedPreferences.getInstance();
   if (token != null && token.isNotEmpty) {

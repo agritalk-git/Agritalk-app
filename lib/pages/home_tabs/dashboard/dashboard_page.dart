@@ -62,7 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
             token: token,
             key: duuid,
           );
-          print(status);
+          // print(status);
           map[duuid] = (status['subscribed'] == true);
         } catch (_) {
           map[duuid] = false;

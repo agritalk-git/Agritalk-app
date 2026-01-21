@@ -41,6 +41,8 @@ PODS:
   - flutter_vlc_player (3.0.3):
     - Flutter
     - MobileVLCKit (~> 3.6.1b1)
+  - geocoding_ios (1.0.5):
+    - Flutter
   - Google-Maps-iOS-Utils (6.1.0):
     - GoogleMaps (~> 9.0)
   - google_maps_flutter_ios (0.0.1):
@@ -110,6 +112,7 @@ DEPENDENCIES:
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_pdfview (from `.symlinks/plugins/flutter_pdfview/ios`)
   - flutter_vlc_player (from `.symlinks/plugins/flutter_vlc_player/ios`)
+  - geocoding_ios (from `.symlinks/plugins/geocoding_ios/ios`)
   - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
@@ -149,6 +152,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_pdfview/ios"
   flutter_vlc_player:
     :path: ".symlinks/plugins/flutter_vlc_player/ios"
+  geocoding_ios:
+    :path: ".symlinks/plugins/geocoding_ios/ios"
   google_maps_flutter_ios:
     :path: ".symlinks/plugins/google_maps_flutter_ios/ios"
   image_picker_ios:
@@ -179,6 +184,7 @@ SPEC CHECKSUMS:
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   flutter_pdfview: 32bf27bda6fd85b9dd2c09628a824df5081246cf
   flutter_vlc_player: 5464f594a9338e080d240bbe7b10ffe30c7bc8bc
+  geocoding_ios: 33776c9ebb98d037b5e025bb0e7537f6dd19646e
   Google-Maps-iOS-Utils: 0a484b05ed21d88c9f9ebbacb007956edd508a96
   google_maps_flutter_ios: 0291eb2aa252298a769b04d075e4a9d747ff7264
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
