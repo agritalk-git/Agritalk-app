@@ -70,6 +70,16 @@ class _CameraLivePageState extends State<CameraLivePage> {
     final showPad = !_landscapeFullscreen;
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
+    final viewerChild = _landscapeFullscreen
+    ? AspectRatio(
+        aspectRatio: 16 / 9,
+        child: CameraViewer(url: widget.url),
+      )
+    : AspectRatio(
+        aspectRatio: 16 / 12,
+        child: CameraViewer(url: widget.url),
+      );
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: isLandscape
@@ -110,10 +120,7 @@ class _CameraLivePageState extends State<CameraLivePage> {
                   scaleEnabled: true,
                   minScale: 1.0,
                   maxScale: 4.0,
-                  child: AspectRatio(
-                    aspectRatio: 16 / 12,
-                    child: CameraViewer(url: widget.url),
-                  ),
+                  child: viewerChild,
                 ),
               ),
             ),
