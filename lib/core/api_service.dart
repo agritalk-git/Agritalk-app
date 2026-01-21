@@ -257,6 +257,101 @@ class ApiService {
     }
   }
 
+  /// ✅ 訂閱/取消訂閱裝置（推播用）
+  /// 後端：POST /odata/api/v1-Odata/Devices('<key>')/subscribe
+  ///
+  /// - key: deviceUUID 或 deviceID（建議 deviceUUID）
+  /// - enabled: true=訂閱 / false=取消訂閱
+  /// - notifyOnControl: 控制事件是否推播（預設 true）
+  /// - channel: "FCM"（預設）
+  /// - targetUUID: 若你的後端權限/查詢需要 targetUUID，傳入可避免找不到
+  Future<Map<String, dynamic>> subscribeDevice({
+    required String token,
+    required String key,
+    required bool enabled,
+    bool notifyOnControl = true,
+    String channel = "FCM",
+    String? targetUUID,
+  }) async {
+    final encodedKey = Uri.encodeComponent(key);
+
+    final url = Uri.parse(
+      '${baseUrl}/odata/api/v1-Odata/Devices(\'$encodedKey\')/subscribe'
+      '${targetUUID != null ? '?targetUUID=$targetUUID' : ''}',
+    );
+
+    final res = await http.post(
+      url,
+      headers: {
+        'Authorization': token, // 你目前 token 內已包含 Bearer 前綴
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: jsonEncode({
+        'enabled': enabled,
+        'notify_on_control': notifyOnControl,
+        'channel': channel,
+      }),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'subscribeDevice failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
+  /// ✅ 取得「我是否訂閱此裝置」
+  /// GET /odata/api/v1-Odata/Devices('<key>')/subscribe
+  Future<Map<String, dynamic>> getDeviceSubscribeStatus({
+    required String token,
+    required String key, // deviceUUID or deviceID
+  }) async {
+    final encodedKey = Uri.encodeComponent(key);
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/Devices(\'$encodedKey\')/subscribe',
+    );
+
+    final res = await http.get(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    }
+    throw Exception(
+      'getDeviceSubscribeStatus failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+    );
+  }
+
+  /// ✅ 取得「我訂閱的裝置清單」
+  /// GET /odata/api/v1-Odata/Devices/Subscriptions
+  Future<List<dynamic>> fetchMyDeviceSubscriptions({
+    required String token,
+  }) async {
+    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/Devices/Subscriptions');
+
+    final res = await http.get(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      if (decoded is Map && decoded['value'] is List) {
+        return (decoded['value'] as List).toList();
+      }
+      throw Exception('Unexpected response: $decoded');
+    }
+
+    throw Exception(
+      'fetchMyDeviceSubscriptions failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+    );
+  }
+
   Future<List<dynamic>?> fetchObservationsLatest(String token) async {
     final url = Uri.parse('$baseUrl/odata/api/v1-Odata/ObservationsLatest');
     final response = await http.get(
@@ -387,7 +482,7 @@ class ApiService {
     }
   }
 
-    /// ✅ 脈衝控制：先 ON（或你給的 value）→ N 秒後自動反向
+  /// ✅ 脈衝控制：先 ON（或你給的 value）→ N 秒後自動反向
   ///
   /// 後端：POST /odata/api/v1-Odata/Settings/pulse/
   /// body:

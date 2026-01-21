@@ -62,9 +62,13 @@ class _LoginPageState extends State<LoginPage> {
 
     final username = isGuest ? 'guest' : usernameController.text.trim();
     final password = isGuest ? 'guest' : passwordController.text;
-    String? fcmToken = "";
+    // String? fcmToken = "";
+
+    final prefs = await SharedPreferences.getInstance();
+    final fcmToken = prefs.getString('fcm_token'); // 可能為 null
 
     final result = await apiService.login(username, password, fcmToken);
+
 
     if (!mounted) return;
 

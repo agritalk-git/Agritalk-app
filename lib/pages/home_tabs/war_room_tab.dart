@@ -166,71 +166,16 @@ class _WarRoomTabState extends State<WarRoomTab> {
   }
 
   Future<void> _onTargetMarkerTapped(String targetUUID, String areaName) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    if (token == null || token.isEmpty) {
-      Navigator.pushReplacementNamed(context, '/');
-      return;
-    }
-
-    // 顯示 loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false, // 禁止點擊背景關閉
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final devices = await apiService.fetchDevices(token, targetUUID);
-      // print(devices);
-      devices?.sort((a, b) {
-        // 轉小寫避免大小寫影響
-        final aName = (a['name'] ?? '').toString().toLowerCase();
-        final bName = (b['name'] ?? '').toString().toLowerCase();
-
-        // 設定權重：攝影(1) < 控制(2) < 其他(3)
-        int getPriority(String name) {
-          if (name.contains('攝影')) return 1;
-          if (name.contains('控制')) return 2;
-          return 3;
-        }
-
-        final aPriority = getPriority(aName);
-        final bPriority = getPriority(bName);
-
-        // 先依權重排，再保持原本字典序
-        if (aPriority != bPriority) {
-          return aPriority.compareTo(bPriority);
-        }
-        return aName.compareTo(bName);
-      });
-
-      if (devices != null) {
-        // 關閉 loading dialog
-        if (mounted) Navigator.pop(context);
-
-        // 跳轉畫面
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) =>
-                    DashboardPage(devices: devices, areaName: areaName),
-          ),
-        );
-      } else {
-        if (mounted) Navigator.pop(context); // 關掉 loading
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('資料載入失敗')));
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context); // 關掉 loading
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('發生錯誤: $e')));
-    }
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DashboardPage(
+        targetUUID: targetUUID,
+        areaName: areaName,
+      ),
+    ),
+  );
+}
 
   void _toggleMapType() {
     setState(() {
