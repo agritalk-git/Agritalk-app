@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'home_tabs/home_tab.dart';
 import 'home_tabs/war_room_tab.dart';
+import 'home_tabs/advanced.dart';
 import 'home_tabs/profile_tab.dart';
 import 'home_tabs/about.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +19,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _tabs = [
     HomeTab(), 
-    WarRoomTab(), ProfileTab(), AboutTab()];
+    WarRoomTab(),AdvancedTab(), ProfileTab(), AboutTab()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -77,6 +78,11 @@ class _HomePageState extends State<HomePage> {
               icon: Icon(Icons.map_outlined),
               selectedIcon: Icon(Icons.map),
               label: '戰情室',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.map_outlined),
+              selectedIcon: Icon(Icons.tune),
+              label: '進階',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

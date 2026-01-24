@@ -327,6 +327,189 @@ class ApiService {
     );
   }
 
+    // =========================================================
+  // ActuatorObservationGroups（群組）
+  // =========================================================
+
+  /// ✅ 查詢我的 ActuatorObservationGroups
+  /// GET /odata/api/v1-Odata/ActuatorObservationGroups
+  Future<List<dynamic>?> fetchActuatorObservationGroups({
+    required String token,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups',
+    );
+
+    final res = await http.get(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      return (decoded is Map && decoded['value'] is List)
+          ? (decoded['value'] as List).toList()
+          : [];
+    } else {
+      print(
+        'fetchActuatorObservationGroups failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+      return null;
+    }
+  }
+
+  /// ✅ 新增 ActuatorObservationGroup
+  /// POST /odata/api/v1-Odata/ActuatorObservationGroups
+  /// body: { "name": "xxx" }
+  Future<Map<String, dynamic>> createActuatorObservationGroup({
+    required String token,
+    required String name,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups',
+    );
+
+    final res = await http.post(
+      url,
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: jsonEncode({'name': name}),
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'createActuatorObservationGroup failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
+  /// ✅ 刪除 ActuatorObservationGroup
+  /// DELETE /odata/api/v1-Odata/ActuatorObservationGroups('<groupUUID>')
+  Future<Map<String, dynamic>> deleteActuatorObservationGroup({
+    required String token,
+    required String groupUUID,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups(\'$groupUUID\')',
+    );
+
+    final res = await http.delete(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'deleteActuatorObservationGroup failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
+  // =========================================================
+  // ActuatorObservationGroups Items（群組內容）
+  // =========================================================
+
+  /// ✅ 查詢群組 items
+  /// GET /odata/api/v1-Odata/ActuatorObservationGroups('<groupUUID>')/Items
+  Future<List<dynamic>?> fetchActuatorObservationGroupItems({
+    required String token,
+    required String groupUUID,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups(\'$groupUUID\')/Items',
+    );
+
+    final res = await http.get(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      return (decoded is Map && decoded['value'] is List)
+          ? (decoded['value'] as List).toList()
+          : [];
+    } else {
+      print(
+        'fetchActuatorObservationGroupItems failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+      return null;
+    }
+  }
+
+  /// ✅ 新增 item（只允許 style='Actuator' 的 Observation）
+  /// POST /odata/api/v1-Odata/ActuatorObservationGroups('<groupUUID>')/Items
+  /// body: { deviceUUID, featureEnglishName, serialId }
+  Future<Map<String, dynamic>> addActuatorObservationGroupItem({
+    required String token,
+    required String groupUUID,
+    required String deviceUUID,
+    required String featureEnglishName,
+    required String serialId, // 保持字串（你後端 serialId 也多用字串）
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups(\'$groupUUID\')/Items',
+    );
+
+    final body = {
+      'deviceUUID': deviceUUID,
+      'featureEnglishName': featureEnglishName,
+      'serialId': serialId,
+    };
+
+    final res = await http.post(
+      url,
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'addActuatorObservationGroupItem failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
+  /// ✅ 刪除 item（用 itemUUID）
+  /// DELETE /odata/api/v1-Odata/ActuatorObservationGroups('<groupUUID>')/Items?itemUUID=...
+  Future<Map<String, dynamic>> deleteActuatorObservationGroupItem({
+    required String token,
+    required String groupUUID,
+    required String itemUUID,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/ActuatorObservationGroups(\'$groupUUID\')/Items'
+      '?itemUUID=${Uri.encodeQueryComponent(itemUUID)}',
+    );
+
+    final res = await http.delete(
+      url,
+      headers: {'Authorization': token, 'accept': 'application/json'},
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+        'deleteActuatorObservationGroupItem failed: ${res.statusCode} ${utf8.decode(res.bodyBytes)}',
+      );
+    }
+  }
+
+
   /// ✅ 取得「我訂閱的裝置清單」
   /// GET /odata/api/v1-Odata/Devices/Subscriptions
   Future<List<dynamic>> fetchMyDeviceSubscriptions({

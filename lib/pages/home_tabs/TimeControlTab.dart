@@ -118,50 +118,101 @@ class TimeControlTabState extends State<TimeControlTab> {
     }
   }
 
-  Future<void> addScheduleDialog() async {
-    final _formKey = GlobalKey<FormState>();
-    TimeOfDay selectedTime = const TimeOfDay(hour: 12, minute: 0);
-    String action = 'ON';
-    Map<String, bool> weekdays = {
-      "monday": false,
-      "tuesday": false,
-      "wednesday": false,
-      "thursday": false,
-      "friday": false,
-      "saturday": false,
-      "sunday": false,
-    };
+  Future<void> addScheduleDialog({Map<String, dynamic>? schedule}) async {
+  final formKey = GlobalKey<FormState>();
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('新增排程'),
-          content: StatefulBuilder(
-            builder: (context, setState) {
-              return Form(
-                key: _formKey,
-                child: SingleChildScrollView(
+  // 若未來要支援編輯：可把 schedule 的值帶入
+  TimeOfDay selectedTime = const TimeOfDay(hour: 12, minute: 0);
+  String action = 'ON';
+
+  // 星期固定順序
+  const weekdayOrder = <String>[
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
+
+  // 預設全 false
+  final Map<String, bool> weekdays = {
+    for (final d in weekdayOrder) d: false,
+  };
+
+  // 若要支援編輯（可先留著）
+  if (schedule != null) {
+    final t = (schedule["time"] ?? "").toString(); // "HH:mm"
+    final parts = t.split(":");
+    if (parts.length >= 2) {
+      final h = int.tryParse(parts[0]) ?? selectedTime.hour;
+      final m = int.tryParse(parts[1]) ?? selectedTime.minute;
+      selectedTime = TimeOfDay(hour: h, minute: m);
+    }
+
+    action = (schedule["action"] ?? "ON").toString();
+    final selectedDays = (schedule["weekdays"] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toSet();
+    for (final d in selectedDays) {
+      if (weekdays.containsKey(d)) weekdays[d] = true;
+    }
+  }
+
+  String weekdayLabel(String key) {
+    switch (key) {
+      case "monday":
+        return "週一";
+      case "tuesday":
+        return "週二";
+      case "wednesday":
+        return "週三";
+      case "thursday":
+        return "週四";
+      case "friday":
+        return "週五";
+      case "saturday":
+        return "週六";
+      case "sunday":
+        return "週日";
+      default:
+        return key;
+    }
+  }
+
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text(schedule == null ? '新增排程' : '編輯排程'),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9, // ✅ 跟 CycleControlTab 一樣
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ListTile(
-                        title: const Text('時間'),
-                        subtitle: Text(selectedTime.format(context)),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
+                      // 時間
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.access_time),
+                        label: Text('時間：${selectedTime.format(context)}'),
+                        onPressed: () async {
                           final picked = await showTimePicker(
                             context: context,
                             initialTime: selectedTime,
                           );
                           if (picked != null) {
-                            setState(() {
-                              selectedTime = picked;
-                            });
+                            setState(() => selectedTime = picked);
                           }
                         },
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
+
+                      // 動作
                       DropdownButtonFormField<String>(
                         value: action,
                         items: const [
@@ -169,97 +220,107 @@ class TimeControlTabState extends State<TimeControlTab> {
                           DropdownMenuItem(value: "OFF", child: Text("關閉")),
                         ],
                         onChanged: (val) {
-                          setState(() {
-                            action = val!;
-                          });
+                          if (val == null) return;
+                          setState(() => action = val);
                         },
                         decoration: const InputDecoration(
                           labelText: '控制動作',
                           border: OutlineInputBorder(),
+                          isDense: true,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "選擇星期",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+
+                      // 星期（中文顯示）
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '選擇星期',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                      Column(
-                        children:
-                            weekdays.keys.map((day) {
-                              return CheckboxListTile(
-                                title: Text(day),
-                                value: weekdays[day],
-                                onChanged: (val) {
-                                  setState(() {
-                                    weekdays[day] = val!;
-                                  });
-                                },
-                              );
-                            }).toList(),
+                      const SizedBox(height: 8),
+
+                      // ✅ 改成 Chip，畫面更像你 Cycle 的風格、也比較不佔高度
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: weekdayOrder.map((dayKey) {
+                          final selected = weekdays[dayKey] == true;
+                          return FilterChip(
+                            label: Text(weekdayLabel(dayKey)),
+                            selected: selected,
+                            onSelected: (v) {
+                              setState(() => weekdays[dayKey] = v);
+                            },
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
                 ),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final selectedDays =
-                    weekdays.entries
-                        .where((e) => e.value)
-                        .map((e) => e.key)
-                        .toList();
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final selectedDays = weekdayOrder
+                      .where((d) => weekdays[d] == true)
+                      .toList();
 
-                if (selectedDays.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('請至少選擇一個星期')));
-                  return;
-                }
+                  if (selectedDays.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('請至少選擇一個星期')),
+                    );
+                    return;
+                  }
 
-                try {
-                  final prefs = await SharedPreferences.getInstance();
-                  final token = prefs.getString('token');
-                  if (token == null) throw '無 token';
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    final token = prefs.getString('token');
+                    if (token == null) throw '無 token';
 
-                  final formattedTime =
-                      '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+                    final formattedTime =
+                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
 
-                  final result = await apiService.scheduleAdd(
-                    token: token,
-                    deviceUUID: widget.deviceUUID,
-                    featureEnglishName: widget.featureEnglishName,
-                    serialId: int.parse(widget.serialId),
-                    action: action,
-                    time: formattedTime,
-                    weekdays: selectedDays,
-                  );
+                    // ✅ 如果你未來要支援「編輯」，可把 schedule["id"] 帶進去你的 API
+                    final result = await apiService.scheduleAdd(
+                      token: token,
+                      deviceUUID: widget.deviceUUID,
+                      featureEnglishName: widget.featureEnglishName,
+                      serialId: int.parse(widget.serialId),
+                      action: action,
+                      time: formattedTime,
+                      weekdays: selectedDays, // ✅ 送英文 key
+                    );
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'] ?? '新增成功')),
-                  );
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(result['message'] ?? '新增成功')),
+                    );
 
-                  Navigator.of(context).pop(); // 關閉 dialog
-                  fetchSchedules(); // 重新載入
-                } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('新增排程失敗：$e')));
-                }
-              },
-              child: const Text('送出'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+                    Navigator.of(ctx).pop();
+                    fetchSchedules();
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('新增排程失敗：$e')),
+                    );
+                  }
+                },
+                child: const Text('送出'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
   // 👉 新增：用於 Dismissible 的確認 + 刪除
   Future<bool> _onConfirmDismiss(int id) async {

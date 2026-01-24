@@ -66,362 +66,427 @@ class _ConditionControlTabState extends State<ConditionControlTab> {
   }
 
   Future<void> addConditionDialog() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    if (token == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('找不到 token')));
-      return;
-    }
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+  if (token == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('找不到 token')),
+    );
+    return;
+  }
 
-    List<dynamic> targets = await apiService.fetchTargets(token) ?? [];
-    List<Map<String, dynamic>> conditions = [];
+  final targets = await apiService.fetchTargets(token) ?? [];
 
-    // ⭐ 新增：動作與秒數（以秒）欄位
-    String action = 'ON'; // 預設 ON
-    final durationCtrl = TextEditingController(); // 可空白
+  // --- 整體欄位 ---
+  String action = 'ON';
+  final durationCtrl = TextEditingController();
 
-    void addEmptyCondition() {
-      conditions.add({
-        'target': null,
-        'device': null,
-        'devices': <dynamic>[],
-        'features': <dynamic>[],
-        'feature': null,
-        'operator': '>',
-        'value': '',
-      });
-    }
+  // --- 每一條 AND 條件的模型 ---
+  final List<Map<String, dynamic>> rows = [];
 
-    addEmptyCondition();
+  void addRow() {
+    rows.add({
+      'targetUUID': null, // String?
+      'device': null, // Map?
+      'devices': <dynamic>[],
+      'features': <dynamic>[],
+      'feature': null, // Map?
+      'operator': '>',
+      'valueCtrl': TextEditingController(),
+    });
+  }
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            Future<void> updateDevicesAndFeatures(
-              int index,
-              String targetUUID,
-            ) async {
-              final devices =
-                  await apiService.fetchDevices(token, targetUUID) ?? [];
-              setState(() {
-                conditions[index]['device'] = null;
-                conditions[index]['feature'] = null;
-                conditions[index]['devices'] = devices;
-                conditions[index]['features'] = [];
-              });
-            }
+  void removeRow(int i) {
+    final c = rows[i]['valueCtrl'] as TextEditingController?;
+    c?.dispose();
+    rows.removeAt(i);
+  }
 
-            Future<void> updateFeatures(
-              int index,
-              Map<String, dynamic> device,
-            ) async {
-              final obs = device['deviceFeature'] ?? [];
-              setState(() {
-                conditions[index]['features'] = obs;
-                conditions[index]['feature'] = null;
-              });
-            }
+  addRow();
 
-            return AlertDialog(
-              title: const Text('新增條件規則'),
-              content: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.9,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // ⭐ 動作 & durationSeconds（秒，可空）
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: action,
-                              decoration: const InputDecoration(
-                                labelText: '執行動作',
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'ON',
-                                  child: Text('ON'),
+  Future<void> loadDevicesForRow(
+    void Function(void Function()) setState,
+    int index,
+    String targetUUID,
+  ) async {
+    final devices = await apiService.fetchDevices(token, targetUUID) ?? [];
+    setState(() {
+      rows[index]['devices'] = devices;
+      rows[index]['device'] = null;
+      rows[index]['features'] = <dynamic>[];
+      rows[index]['feature'] = null;
+    });
+  }
+
+  void loadFeaturesForRow(
+    void Function(void Function()) setState,
+    int index,
+    Map<String, dynamic> device,
+  ) {
+    // 你原本用 device['deviceFeature']，但你其他頁面常用 observationlatest/deviceFeature
+    // 這邊保留你的寫法；若你的 API 實際是 observationlatest，改成 device['observationlatest'] 即可。
+    final obs = (device['deviceFeature'] as List?) ?? [];
+    setState(() {
+      rows[index]['features'] = obs;
+      rows[index]['feature'] = null;
+    });
+  }
+
+  String featureLabel(Map<String, dynamic> f) {
+    final dn = (f['deviceFeatureName'] ?? '').toString();
+    final alias = (f['alias'] ?? '').toString();
+    final name = dn.isNotEmpty ? dn : (alias.isNotEmpty ? alias : '未知項目');
+    final sid = (f['serialId'] ?? '無').toString();
+    return '$name（編號: $sid）';
+  }
+
+  const operators = ['>', '<', '>=', '<=', '=='];
+
+  await showDialog(
+    context: context,
+    builder: (dialogCtx) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          Widget sectionTitle(String text) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  text,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
+              );
+
+          Widget fieldGap() => const SizedBox(height: 12);
+
+          return AlertDialog(
+            title: const Text('新增條件規則'),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9, // ✅ 尺寸統一
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // ====== 區塊：動作與回復時間 ======
+                    Card(
+                      elevation: 0,
+                      color: Colors.grey.shade50,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            sectionTitle('觸發後要做什麼'),
+                            fieldGap(),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: action,
+                                    decoration: const InputDecoration(
+                                      labelText: '執行動作',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 'ON', child: Text('ON')),
+                                      DropdownMenuItem(value: 'OFF', child: Text('OFF')),
+                                    ],
+                                    onChanged: (v) => setState(() => action = v ?? 'ON'),
+                                  ),
                                 ),
-                                DropdownMenuItem(
-                                  value: 'OFF',
-                                  child: Text('OFF'),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: durationCtrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: '回復時間（秒）',
+                                      hintText: '可留空',
+                                      helperText: 'ON→N秒後OFF；OFF→N秒後ON',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                  ),
                                 ),
                               ],
-                              onChanged:
-                                  (v) => setState(() => action = v ?? 'ON'),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: durationCtrl,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: '回復時間',
-                                helperText: 'ON→N秒後OFF；OFF→N秒後ON',
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                    ),
 
-                      // 條件組
-                      ...conditions.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final cond = entry.value;
+                    const SizedBox(height: 14),
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
+                    // ====== 區塊：條件列表 ======
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'AND 條件（全部成立才觸發）',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    ...rows.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final row = entry.value;
+
+                      final selectedTargetUUID = row['targetUUID'] as String?;
+                      final devices = row['devices'] as List<dynamic>;
+                      final device = row['device'] as Map<String, dynamic>?;
+                      final features = row['features'] as List<dynamic>;
+                      final feature = row['feature'] as Map<String, dynamic>?;
+                      final op = (row['operator'] ?? '>').toString();
+                      final valueCtrl = row['valueCtrl'] as TextEditingController;
+
+                      return Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                          child: Column(
                             children: [
-                              // Target
-                              SizedBox(
-                                width: 220,
-                                child: DropdownButtonFormField<String>(
-                                  value: cond['target'] as String?,
-                                  hint: const Text("選擇目標"),
-                                  items:
-                                      targets.map<DropdownMenuItem<String>>((
-                                        t,
-                                      ) {
-                                        return DropdownMenuItem<String>(
-                                          value: t['targetUUID'],
-                                          child: Text(t['area'] ?? '未命名'),
-                                        );
-                                      }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      cond['target'] = value;
-                                    });
-                                    if (value != null) {
-                                      updateDevicesAndFeatures(index, value);
-                                    }
-                                  },
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '條件 ${index + 1}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  if (rows.length > 1)
+                                    IconButton(
+                                      tooltip: '移除條件',
+                                      onPressed: () => setState(() => removeRow(index)),
+                                      icon: const Icon(Icons.close, color: Colors.red),
+                                    ),
+                                ],
                               ),
+                              const SizedBox(height: 10),
+
+                              // Target
+                              DropdownButtonFormField<String>(
+                                value: selectedTargetUUID,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: '目標（Target）',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                items: targets.map<DropdownMenuItem<String>>((t) {
+                                  return DropdownMenuItem<String>(
+                                    value: (t['targetUUID'] ?? '').toString(),
+                                    child: Text((t['area'] ?? '未命名').toString()),
+                                  );
+                                }).toList(),
+                                onChanged: (v) async {
+                                  setState(() => row['targetUUID'] = v);
+                                  if (v != null && v.isNotEmpty) {
+                                    await loadDevicesForRow(setState, index, v);
+                                  }
+                                },
+                              ),
+
+                              const SizedBox(height: 10),
 
                               // Device
-                              SizedBox(
-                                width: 220,
-                                child: DropdownButtonFormField<
-                                  Map<String, dynamic>
-                                >(
-                                  value:
-                                      cond['device'] as Map<String, dynamic>?,
-                                  hint: const Text("選擇裝置"),
-                                  items:
-                                      (cond['devices'] ?? []).map<
-                                        DropdownMenuItem<Map<String, dynamic>>
-                                      >((d) {
-                                        return DropdownMenuItem<
-                                          Map<String, dynamic>
-                                        >(
-                                          value: d,
-                                          child: Text(d['name'] ?? '未知裝置'),
-                                        );
-                                      }).toList(),
-                                  onChanged: (device) {
-                                    setState(() {
-                                      cond['device'] = device;
-                                    });
-                                    if (device != null) {
-                                      updateFeatures(index, device);
-                                    }
-                                  },
+                              DropdownButtonFormField<Map<String, dynamic>>(
+                                value: device,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: '裝置（Device）',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
                                 ),
+                                items: devices.map<DropdownMenuItem<Map<String, dynamic>>>((d) {
+                                  return DropdownMenuItem<Map<String, dynamic>>(
+                                    value: d,
+                                    child: Text((d['name'] ?? '未知裝置').toString()),
+                                  );
+                                }).toList(),
+                                onChanged: (d) {
+                                  setState(() => row['device'] = d);
+                                  if (d != null) loadFeaturesForRow(setState, index, d);
+                                },
                               ),
+
+                              const SizedBox(height: 10),
 
                               // Feature
-                              SizedBox(
-                                width: 220,
-                                child: DropdownButtonFormField<
-                                  Map<String, dynamic>
-                                >(
-                                  value:
-                                      cond['feature'] as Map<String, dynamic>?,
-                                  hint: const Text("選擇感測項目"),
-                                  items:
-                                      (cond['features'] ?? []).map<
-                                        DropdownMenuItem<Map<String, dynamic>>
-                                      >((f) {
-                                        final name =
-                                            (f['deviceFeatureName']
-                                                        ?.toString()
-                                                        .isNotEmpty ==
-                                                    true)
-                                                ? f['deviceFeatureName']
-                                                : f['alias'] ?? '未知項目';
-                                        final text =
-                                            '$name（編號: ${f['serialId'] ?? '無'}）';
-                                        return DropdownMenuItem<
-                                          Map<String, dynamic>
-                                        >(value: f, child: Text(text));
-                                      }).toList(),
-                                  onChanged: (f) {
-                                    setState(() {
-                                      cond['feature'] = f;
-                                    });
-                                  },
+                              DropdownButtonFormField<Map<String, dynamic>>(
+                                value: feature,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: '感測項目（Feature）',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
                                 ),
+                                items: features.map<DropdownMenuItem<Map<String, dynamic>>>((f) {
+                                  return DropdownMenuItem<Map<String, dynamic>>(
+                                    value: f,
+                                    child: Text(featureLabel(f)),
+                                  );
+                                }).toList(),
+                                onChanged: (f) => setState(() => row['feature'] = f),
                               ),
 
-                              // Operator
-                              SizedBox(
-                                width: 220,
-                                child: DropdownButtonFormField<String>(
-                                  value: cond['operator'],
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: ">",
-                                      child: Text(">"),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: "<",
-                                      child: Text("<"),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: ">=",
-                                      child: Text(">="),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: "<=",
-                                      child: Text("<="),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: "==",
-                                      child: Text("=="),
-                                    ),
-                                  ],
-                                  onChanged: (val) {
-                                    setState(() {
-                                      cond['operator'] = val;
-                                    });
-                                  },
+                              const SizedBox(height: 12),
+
+                              // Operator Chips
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '比較子',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey.shade700,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: operators.map((o) {
+                                  final selected = op == o;
+                                  return ChoiceChip(
+                                    label: Text(o),
+                                    selected: selected,
+                                    onSelected: (_) => setState(() => row['operator'] = o),
+                                  );
+                                }).toList(),
+                              ),
+
+                              const SizedBox(height: 12),
 
                               // Value
-                              SizedBox(
-                                width: 220,
-                                child: TextFormField(
-                                  initialValue: cond['value'],
-                                  decoration: const InputDecoration(
-                                    hintText: "數值",
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    cond['value'] = val;
-                                  },
+                              TextFormField(
+                                controller: valueCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: '數值',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
                                 ),
-                              ),
-
-                              // 刪除條件
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    conditions.removeAt(index);
-                                  });
-                                },
                               ),
                             ],
                           ),
-                        );
-                      }).toList(),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.add),
-                          label: const Text("+ AND 條件"),
-                          onPressed: () {
-                            setState(() => addEmptyCondition());
-                          },
                         ),
+                      );
+                    }).toList(),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('＋ AND 條件'),
+                        onPressed: () => setState(() => addRow()),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("取消"),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      final prepared =
-                          conditions
-                              .where(
-                                (c) =>
-                                    c['device'] != null &&
-                                    c['feature'] != null &&
-                                    c['value'].toString().isNotEmpty,
-                              )
-                              .map((c) {
-                                return {
-                                  "deviceUUID": c['device']['deviceUUID'],
-                                  "sensor": c['feature']['name'] ?? '',
-                                  "serialId": c['feature']['serialId'],
-                                  "operator": c['operator'],
-                                  "value": num.tryParse(c['value']) ?? 0,
-                                };
-                              })
-                              .toList();
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // dispose controllers
+                  for (final r in rows) {
+                    (r['valueCtrl'] as TextEditingController?)?.dispose();
+                  }
+                  durationCtrl.dispose();
+                  Navigator.pop(dialogCtx);
+                },
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    // 1) 準備條件
+                    final prepared = <Map<String, dynamic>>[];
 
-                      if (prepared.isEmpty) {
-                        throw '請至少新增一個完整的條件';
-                      }
+                    for (final r in rows) {
+                      final dev = r['device'] as Map<String, dynamic>?;
+                      final feat = r['feature'] as Map<String, dynamic>?;
+                      final op = (r['operator'] ?? '>').toString();
+                      final vtxt =
+                          (r['valueCtrl'] as TextEditingController).text.trim();
 
-                      // ⭐ 解析秒數（可空）
-                      final int? durationSeconds =
-                          durationCtrl.text.trim().isEmpty
-                              ? null
-                              : int.tryParse(durationCtrl.text.trim());
+                      if (dev == null || feat == null || vtxt.isEmpty) continue;
 
-                      final result = await apiService.conditionAdd(
-                        token: token,
-                        deviceUUID: widget.deviceUUID,
-                        serialId: int.parse(widget.serialId),
-                        action: action, // 使用者選擇
-                        conditions: prepared,
-                        durationSeconds: durationSeconds, // ⭐ 新增
-                      );
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      await fetchConditions();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result["message"] ?? "新增成功")),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text("新增失敗：$e")));
+                      prepared.add({
+                        "deviceUUID": dev['deviceUUID'],
+                        "sensor": feat['name'] ?? '', // 你原本的欄位
+                        "serialId": feat['serialId'],
+                        "operator": op,
+                        "value": num.tryParse(vtxt) ?? 0,
+                      });
                     }
-                  },
-                  child: const Text("送出"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+
+                    if (prepared.isEmpty) {
+                      throw '請至少填寫一個完整的條件（目標/裝置/項目/比較子/數值）';
+                    }
+
+                    // 2) durationSeconds 驗證（可空，若填必須 >0）
+                    final dTxt = durationCtrl.text.trim();
+                    int? durationSeconds;
+                    if (dTxt.isNotEmpty) {
+                      durationSeconds = int.tryParse(dTxt);
+                      if (durationSeconds == null || durationSeconds <= 0) {
+                        throw '回復時間必須是正整數秒（或留空）';
+                      }
+                    }
+
+                    final result = await apiService.conditionAdd(
+                      token: token,
+                      deviceUUID: widget.deviceUUID,
+                      serialId: int.parse(widget.serialId),
+                      action: action,
+                      conditions: prepared,
+                      durationSeconds: durationSeconds,
+                    );
+
+                    if (!mounted) return;
+
+                    // dispose controllers
+                    for (final r in rows) {
+                      (r['valueCtrl'] as TextEditingController?)?.dispose();
+                    }
+                    durationCtrl.dispose();
+
+                    Navigator.pop(dialogCtx);
+                    await fetchConditions();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(result["message"] ?? "新增成功")),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("新增失敗：$e")),
+                    );
+                  }
+                },
+                child: const Text('送出'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
   Future<bool> _onConfirmDismissCondition(int id) async {
     final ok = await showDialog<bool>(
