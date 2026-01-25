@@ -400,7 +400,11 @@ class ApiService {
 
     final res = await http.delete(
       url,
-      headers: {'Authorization': token, 'accept': 'application/json'},
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
     );
 
     if (res.statusCode == 200) {
@@ -428,7 +432,11 @@ class ApiService {
 
     final res = await http.get(
       url,
-      headers: {'Authorization': token, 'accept': 'application/json'},
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
     );
 
     if (res.statusCode == 200) {
@@ -497,7 +505,11 @@ class ApiService {
 
     final res = await http.delete(
       url,
-      headers: {'Authorization': token, 'accept': 'application/json'},
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
     );
 
     if (res.statusCode == 200) {
@@ -509,6 +521,104 @@ class ApiService {
     }
   }
 
+
+  Future<List<dynamic>?> fetchGroupCyclic(String token, String groupUUID) async {
+    final url = Uri.parse(
+      '$baseUrl/odata/api/v1-Odata/group_cyclic/list?groupUUID=${Uri.encodeComponent(groupUUID)}',
+    );
+
+    final res = await http.get(url, headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },);
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      // 後端回：{ "rules": [...] }
+      return (body is Map && body['rules'] is List) ? body['rules'] as List : [];
+    }
+
+    throw Exception(
+      'fetchGroupCyclic failed ${res.statusCode}: ${utf8.decode(res.bodyBytes)}',
+    );
+  }
+
+  /// ✅ 新增/更新群組循環排程
+  /// POST /odata/api/v1-Odata/group_cyclic/add
+  ///
+  /// ruleId 可空：null = 新增；有值 = 更新
+  Future<Map<String, dynamic>> groupCyclicAdd({
+    required String token,
+    required String groupUUID,
+    required int onMinutes,
+    required int offMinutes,
+    required String startTime, // "HH:mm"
+    required String endTime, // "HH:mm"
+    required List<String> weekdays, // ["monday", ...]
+    required bool enabled,
+    int? ruleId,
+  }) async {
+    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/group_cyclic/add');
+
+    final payload = <String, dynamic>{
+      'groupUUID': groupUUID,
+      'start_time': startTime,
+      'end_time': endTime,
+      'on_minutes': onMinutes,
+      'off_minutes': offMinutes,
+      'weekdays': weekdays,
+      'enabled': enabled,
+      if (ruleId != null) 'ruleId': ruleId,
+    };
+
+    // print(payload);
+
+    final res = await http.post(
+      url,
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'groupCyclicAdd failed ${res.statusCode}: ${utf8.decode(res.bodyBytes)}',
+    );
+  }
+
+  /// ✅ 刪除群組循環排程
+  /// POST /odata/api/v1-Odata/group_cyclic/del
+  Future<Map<String, dynamic>> groupCyclicDel({
+    required String token,
+    required int id,
+  }) async {
+    final url = Uri.parse('$baseUrl/odata/api/v1-Odata/group_cyclic/del');
+
+    final res = await http.post(
+      url,
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: jsonEncode({'id': id}),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'groupCyclicDel failed ${res.statusCode}: ${utf8.decode(res.bodyBytes)}',
+    );
+  }
 
   /// ✅ 取得「我訂閱的裝置清單」
   /// GET /odata/api/v1-Odata/Devices/Subscriptions

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:chcg_iot_app/pages/home_tabs/advanced/group_control_items_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/advanced/group_control_execute_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/advanced/group_pulse_control_tab.dart';
+import 'package:chcg_iot_app/pages/home_tabs/advanced/group_cyclic_control_tab.dart';
 
 class GroupControlTabsPage extends StatefulWidget {
   final String groupUUID;
@@ -89,18 +91,12 @@ class _GroupControlTabsPageState extends State<GroupControlTabsPage>
             asEmbedded: true,
           ),
           GroupControlExecutePage(groupUUID: widget.groupUUID),
-          const _ComingSoonPage(
-            title: '秒數控制（PULSE）',
-            desc: '下一步會做每個 item 的秒數控制與批次操作。',
-          ),
+          GroupPulseControlTab(groupUUID: widget.groupUUID),
           const _ComingSoonPage(
             title: '定時控制（Schedule）',
             desc: '依星期/時間設定觸發（固定時間點）。',
           ),
-          const _ComingSoonPage(
-            title: '循環控制（Loop）',
-            desc: 'ON X 秒 / OFF Y 秒 的循環控制。',
-          ),
+          GroupCyclicControlTab(groupUUID: widget.groupUUID)
         ],
       ),
     );

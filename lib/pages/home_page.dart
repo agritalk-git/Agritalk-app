@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
               label: '戰情室',
             ),
             NavigationDestination(
-              icon: Icon(Icons.map_outlined),
+              icon: Icon(Icons.tune),
               selectedIcon: Icon(Icons.tune),
               label: '進階',
             ),
