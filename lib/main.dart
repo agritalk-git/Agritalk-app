@@ -6,6 +6,7 @@ import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:media_kit/media_kit.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 OverlayEntry? _topBannerEntry;
@@ -18,6 +19,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  MediaKit.ensureInitialized();
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp();
 
@@ -36,31 +38,31 @@ print('🔔 notification permission: ${settings.authorizationStatus}');
 
 
 
-// 2) iOS 等 APNS token 就緒（Android 也不會壞）
-String? apnsToken;
-for (int i = 0; i < 10; i++) {
-  apnsToken = await messaging.getAPNSToken();
-  if (apnsToken != null) break;
-  await Future.delayed(const Duration(milliseconds: 500));
-}
-print('🍎 APNS token: $apnsToken');
+// // 2) iOS 等 APNS token 就緒（Android 也不會壞）
+// String? apnsToken;
+// for (int i = 0; i < 10; i++) {
+//   apnsToken = await messaging.getAPNSToken();
+//   if (apnsToken != null) break;
+//   await Future.delayed(const Duration(milliseconds: 500));
+// }
+// print('🍎 APNS token: $apnsToken');
 
-// 3) 再拿 FCM token
-String? token = await messaging.getToken();
-print('✅ FCM Token: $token');
+// // 3) 再拿 FCM token
+// String? token = await messaging.getToken();
+// print('✅ FCM Token: $token');
 
-  final prefs = await SharedPreferences.getInstance();
-  if (token != null && token.isNotEmpty) {
-    await prefs.setString('fcm_token', token);
-  }
+//   final prefs = await SharedPreferences.getInstance();
+//   if (token != null && token.isNotEmpty) {
+//     await prefs.setString('fcm_token', token);
+//   }
 
-  await FirebaseMessaging.instance.subscribeToTopic("all_news");
+//   await FirebaseMessaging.instance.subscribeToTopic("all_news");
 
-  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('fcm_token', newToken);
-    print('🔄 FCM Token refreshed: $newToken');
-  });
+//   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.setString('fcm_token', newToken);
+//     print('🔄 FCM Token refreshed: $newToken');
+//   });
 
   runApp(
     ResponsiveSizer(
