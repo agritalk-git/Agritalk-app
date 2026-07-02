@@ -86,7 +86,7 @@ class _CameraLivePageState extends State<CameraLivePage> {
           ? null
           : AppBar(
               centerTitle: true,
-              backgroundColor: const Color(0xFF7B4DBB),
+              backgroundColor: const Color(0xFF065B4C),
               foregroundColor: Colors.white,
               title: const Text('攝影機直播'),
               actions: [
@@ -176,6 +176,8 @@ class _PtzPadState extends State<_PtzPad> {
   String? _movingDir;
   Timer? _nudgeTimer;
 
+  bool get _isRtspControl => widget.controlBase.startsWith('rtsp');
+
   Future<void> _startMove(String dir) async {
     if (_moving && _movingDir == dir) return;
     _moving = true;
@@ -190,8 +192,12 @@ class _PtzPadState extends State<_PtzPad> {
   }
 
   Future<void> _stopMove() async {
-    if (!_moving) return;
-    _moving = false;
+  if (!_moving) return;
+
+  _moving = false;
+  final wasRtsp = _isRtspControl;
+
+  if (wasRtsp) {
     final ok = await apiService.cameraMove(
       controlBase: widget.controlBase,
       direction: 'stop',
@@ -199,10 +205,16 @@ class _PtzPadState extends State<_PtzPad> {
       password: widget.password,
     );
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PTZ 停止失敗')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PTZ 停止失敗')),
+      );
     }
-    _movingDir = null;
   }
+
+  _movingDir = null;
+}
+
+  
 
   Future<void> _nudge(String dir, {int ms = 200}) async {
     await _startMove(dir);
@@ -251,23 +263,69 @@ class _PtzPadState extends State<_PtzPad> {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: active ? const Color(0xFF7B4DBB).withOpacity(0.95) : Colors.white.withOpacity(0.92),
+        color: active ? const Color(0xFF065B4C).withOpacity(0.95) : Colors.white.withOpacity(0.92),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: IconButton(
-        icon: Icon(icon, color: active ? Colors.white : const Color(0xFF7B4DBB)),
+        icon: Icon(icon, color: active ? Colors.white : const Color(0xFF065B4C)),
         onPressed: onPressed,
       ),
     );
   }
 
+
+
   Widget _dirBtn(IconData icon, String dir, {double size = 56}) {
-    final isActive = _moving && _movingDir == dir;
-    return _roundBtn(icon, active: isActive, size: size, onPressed: () => _nudge(dir));
+  final isActive = _moving && _movingDir == dir;
+
+  final child = AnimatedContainer(
+    duration: const Duration(milliseconds: 120),
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: isActive
+          ? const Color(0xFF065B4C).withOpacity(0.95)
+          : Colors.white.withOpacity(0.92),
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.25),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Icon(
+      icon,
+      color: isActive ? Colors.white : const Color(0xFF065B4C),
+      size: 28,
+    ),
+  );
+
+  // ✅ 只有 RTSP 改成按下開始、放開停止
+  if (_isRtspControl) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _startMove(dir),
+      onTapUp: (_) => _stopMove(),
+      onTapCancel: _stopMove,
+      onLongPressStart: (_) => _startMove(dir),
+      onLongPressEnd: (_) => _stopMove(),
+      child: child,
+    );
   }
+
+  // ✅ 其他控制方式維持原本 nudge 邏輯
+  return _roundBtn(
+    icon,
+    active: isActive,
+    size: size,
+    onPressed: () => _nudge(dir),
+  );
+}
 
   @override
   void dispose() {

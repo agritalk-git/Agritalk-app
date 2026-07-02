@@ -244,7 +244,7 @@ class _DashboardPageState extends State<DashboardPage> {
           SliverAppBar(
             pinned: true,
             centerTitle: true,
-            backgroundColor: const Color(0xFF7B4DBB),
+            backgroundColor: const Color(0xFF065B4C),
             foregroundColor: Colors.white,
             elevation: 1,
             title: Text(
@@ -357,7 +357,7 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.sensors, size: 6.w, color: const Color(0xFF7B4DBB)),
+                Icon(Icons.sensors, size: 6.w, color: const Color(0xFF065B4C)),
                 SizedBox(width: 2.w),
                 Expanded(
                   child: Text(
@@ -365,7 +365,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: TextStyle(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF7B4DBB),
+                      color: const Color(0xFF065B4C),
                     ),
                     softWrap: true,
                   ),
@@ -386,7 +386,7 @@ class _DashboardPageState extends State<DashboardPage> {
       subscribed
           ? Icons.notifications_active_rounded
           : Icons.notifications_off_rounded,
-      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
+      color: subscribed ? const Color(0xFF065B4C) : Colors.black45,
       size: 6.w,
     ),
     onPressed: () => _toggleSubscribe(device),
@@ -519,7 +519,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7B4DBB),
+                      color: const Color(0xFF065B4C),
                     ),
                     softWrap: true,
                   ),
@@ -539,7 +539,7 @@ class _DashboardPageState extends State<DashboardPage> {
       subscribed
           ? Icons.notifications_active_rounded
           : Icons.notifications_off_rounded,
-      color: subscribed ? const Color(0xFF7B4DBB) : Colors.black45,
+      color: subscribed ? const Color(0xFF065B4C) : Colors.black45,
     ),
     onPressed: () => _toggleSubscribe(device),
   );
@@ -641,25 +641,45 @@ class _DashboardPageState extends State<DashboardPage> {
 
     String ctrlScheme;
     int? ctrlPort;
+    final controlBase;
 
     if (u.scheme == 'http' || u.scheme == 'https') {
       ctrlScheme = u.scheme;
       ctrlPort = u.hasPort ? u.port : null;
+
+      final authority = (ctrlPort != null) ? '${u.host}:$ctrlPort' : u.host;
+      final userInfoInUrl =
+          (username != null && password != null) ? '$username:$password@' : '';
+      controlBase =
+          '$ctrlScheme://$userInfoInUrl$authority/cgi-bin/camctrl/camctrl.cgi';
     } else {
-      ctrlScheme = 'http';
+      ctrlScheme = 'rtsp';
       if (u.hasPort) {
-        final p = u.port - 1;
+        // final p = u.port - 1;
+        final p = u.port-20;
         ctrlPort = p > 0 ? p : null;
       } else {
         ctrlPort = null;
       }
+
+      final authority = (ctrlPort != null) ? '${u.host}:$ctrlPort' : u.host;
+      final userInfoInUrl =
+          (username != null && password != null) ? '$username:$password@' : '';
+      controlBase =
+          '$ctrlScheme://$userInfoInUrl$authority/ISAPI/PTZCtrl/channels/1/continuous';
     }
 
-    final authority = (ctrlPort != null) ? '${u.host}:$ctrlPort' : u.host;
-    final userInfoInUrl =
-        (username != null && password != null) ? '$username:$password@' : '';
-    final controlBase =
-        '$ctrlScheme://$userInfoInUrl$authority/cgi-bin/camctrl/camctrl.cgi';
+    
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print("------------------------------------------");
+    print(controlBase);
 
     Navigator.push(
       context,

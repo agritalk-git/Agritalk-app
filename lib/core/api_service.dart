@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:typed_data';
 
+import 'dart:io';
 import 'package:dio/dio.dart';
 
 class ApiService {
@@ -1493,40 +1494,195 @@ class ApiService {
   /// 建一個「控制 base」：例如 https://host[:port]/cgi-bin/camctrl/camctrl.cgi
   /// 然後傳指令（move=up/down/left/right/stop）
   Future<bool> cameraMove({
-    required String controlBase,
-    required String direction, // up/down/left/right/stop
-    String? username,
-    String? password,
-  }) async {
-    final url = '$controlBase?move=$direction&channel=0&stream=0';
-    print('[cameraMove] URL: $url');
+  required String controlBase,
+  required String direction, // up/down/left/right/stop
+  String? username,
+  String? password,
+}) async {
+  print('[cameraMove] controlBase: $controlBase');
 
-    // 第一次嘗試
-    final success = await cameraControlGetByUrl(
-      url,
-      username: username,
-      password: password,
-    );
+  // ================================
+  // ✅ 只有 RTSP 才走 PTZ API (PUT XML)
+  // ================================
+  if (controlBase.startsWith('rtsp')) {
+    try {
+      final httpBase = controlBase.replaceFirst('rtsp://', 'http://');
+      
+      // print(httpBase);
 
-    // 如果失敗且 controlBase 包含 camctrl，就改成 eCamCtrl 再試一次
-    if (!success && controlBase.contains('camctrl.cgi')) {
-      final fallbackBase = controlBase.replaceFirst(
-        'camctrl.cgi',
-        'eCamCtrl.cgi',
-      );
-      final fallbackUrl = '$fallbackBase?move=$direction&channel=0&stream=0';
-      print('[cameraMove] Retry URL: $fallbackUrl');
+      final uri = Uri.parse(httpBase);
+      final port = uri.hasPort ? uri.port : 80;
 
-      return cameraControlGetByUrl(
-        fallbackUrl,
+      final url = 'http://${uri.host}:$port/ISAPI/PTZCtrl/channels/1/continuous';
+
+      print('[cameraMove][RTSP->HTTP] URL: $url');
+
+      String pan = '0';
+      String tilt = '0';
+
+      switch (direction) {
+        case 'up':
+          tilt = '70';
+          break;
+        case 'down':
+          tilt = '-70';
+          break;
+        case 'left':
+          pan = '-70';
+          break;
+        case 'right':
+          pan = '70';
+          break;
+        case 'stop':
+          pan = '0';
+          tilt = '0';
+          break;
+        default:
+          pan = '0';
+          tilt = '0';
+      }
+
+      final xml = '''
+<PTZData>
+    <pan>$pan</pan>
+    <tilt>$tilt</tilt>
+    <zoom>0</zoom>
+</PTZData>
+''';
+
+      return await cameraControlPutByUrl(
+        url,
+        body: xml,
         username: username,
         password: password,
       );
+    } catch (e) {
+      print('[cameraMove][RTSP] Error: $e');
+      return false;
     }
-
-    return success;
   }
 
+  // ================================
+  // ✅ 非 RTSP 維持原本 GET 控制
+  // ================================
+  final url = '$controlBase?move=$direction&channel=0&stream=0';
+  print('[cameraMove] URL: $url');
+
+  final success = await cameraControlGetByUrl(
+    url,
+    username: username,
+    password: password,
+  );
+
+  if (!success && controlBase.contains('camctrl.cgi')) {
+    final fallbackBase = controlBase.replaceFirst(
+      'camctrl.cgi',
+      'eCamCtrl.cgi',
+    );
+    final fallbackUrl = '$fallbackBase?move=$direction&channel=0&stream=0';
+    print('[cameraMove] Retry URL: $fallbackUrl');
+
+    return cameraControlGetByUrl(
+      fallbackUrl,
+      username: username,
+      password: password,
+    );
+  }
+
+  return success;
+}
+
+
+
+Future<bool> cameraControlPutByUrl(
+  String url, {
+  required String body,
+  String? username,
+  String? password,
+}) async {
+  HttpClient? client;
+
+  try {
+    final uri = Uri.parse(url);
+    client = HttpClient();
+
+    client.authenticate = (Uri authUri, String scheme, String? realm) async {
+      print('[AUTH] scheme=$scheme realm=$realm uri=$authUri');
+
+      if (username == null || password == null) {
+        return false;
+      }
+
+      final s = scheme.toLowerCase();
+
+      if (s == 'digest') {
+        client!.addCredentials(
+          authUri,
+          realm ?? '',
+          HttpClientDigestCredentials(username, password),
+        );
+        return true;
+      }
+
+      if (s == 'basic') {
+        client!.addCredentials(
+          authUri,
+          realm ?? '',
+          HttpClientBasicCredentials(username, password),
+        );
+        return true;
+      }
+
+      return false;
+    };
+
+    // =========================
+    // 1) 先做一次暖機，拿 Digest challenge
+    // =========================
+    try {
+      final warmupReq = await client.getUrl(uri);
+      warmupReq.headers.set(HttpHeaders.acceptHeader, '*/*');
+      warmupReq.headers.set(HttpHeaders.connectionHeader, 'close');
+
+      final warmupResp = await warmupReq.close();
+      final warmupBody = await utf8.decodeStream(warmupResp);
+
+      print('[WARMUP] status: ${warmupResp.statusCode}');
+      print('[WARMUP] body: $warmupBody');
+    } catch (e) {
+      print('[WARMUP] error: $e');
+    }
+
+    // =========================
+    // 2) 再送真正的 PUT
+    // =========================
+    final request = await client.putUrl(uri);
+
+    final bytes = utf8.encode(body);
+
+    request.headers.set(HttpHeaders.acceptHeader, '*/*');
+    request.headers.set(HttpHeaders.connectionHeader, 'close');
+    request.contentLength = bytes.length;
+    request.add(bytes);
+
+    // print('[PUT] request body >>>');
+    // print(body);
+    // print('<<< [PUT] request body');
+
+    final response = await request.close();
+    final responseBody = await utf8.decodeStream(response);
+
+    // print('[PUT] status: ${response.statusCode}');
+    // print('[PUT] body: $responseBody');
+
+    return response.statusCode >= 200 && response.statusCode < 300;
+  } catch (e) {
+    print('[PUT] error: $e');
+    return false;
+  } finally {
+    client?.close(force: true);
+  }
+}
   /// 變焦（zoom=tele / zoom=wide）
   Future<bool> cameraZoom({
     required String controlBase,
