@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:chcg_iot_app/pages/home_tabs/guava_page/guava_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/grape_page/grape_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/fruit_platform_page.dart';
 import 'package:chcg_iot_app/pages/home_tabs/disease_ai/main.dart';
 import 'package:chcg_iot_app/pages/home_tabs/NewsDetailPage.dart';
 import 'package:chcg_iot_app/core/api_service.dart';
@@ -23,14 +24,10 @@ class HomeTab extends StatefulWidget {
 
 class _EntryTile extends StatelessWidget {
   final String title;
-  final String image;
-  final VoidCallback onTap;
+  final String? image;
+  final VoidCallback? onTap;
 
-  const _EntryTile({
-    required this.title,
-    required this.image,
-    required this.onTap,
-  });
+  const _EntryTile({required this.title, this.image, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +41,17 @@ class _EntryTile extends StatelessWidget {
             aspectRatio: 4 / 3,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(image, fit: BoxFit.cover),
+              child:
+                  image == null
+                      ? const ColoredBox(
+                        color: Color(0xFFEDE8F5),
+                        child: Icon(
+                          Icons.eco_outlined,
+                          color: Color(0xFF7B4DBB),
+                          size: 36,
+                        ),
+                      )
+                      : Image.asset(image!, fit: BoxFit.cover),
             ),
           ),
           const SizedBox(height: 6),
@@ -95,8 +102,6 @@ class _HomeTabState extends State<HomeTab> {
     fetchNewsData();
   }
 
-  
-
   Future<void> fetchNewsData() async {
     try {
       final data = await apiService.fetchNews();
@@ -136,21 +141,21 @@ class _HomeTabState extends State<HomeTab> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: [
-          _buildSectionTitle("熱門資源入口"),
-          const SizedBox(height: 8),
-          _buildEntrySliderAdaptive(),
+          _buildEntryGrid(),
 
           const SizedBox(height: 24),
+          /*
           _buildSectionTitle("近期焦點消息"),
           const SizedBox(height: 8),
           _buildNewsSliderAdaptive(),
 
           const SizedBox(height: 24),
+          */
+          /*
           _buildSectionTitle("訊息中心"),
           const SizedBox(height: 8),
           _buildRankListAdaptive(),
-
-          
+          */
         ],
       ),
     );
@@ -181,14 +186,14 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget _buildEntrySliderAdaptive() {
-    final entries = [
-      {
-        'title': '彰化縣政府',
-        'subtitle': '地方政府平台',
-        'image': 'assets/homepage/changhua.png',
-        'url': 'https://www.chcg.gov.tw/ch2/index.aspx',
-      },
+  Widget _buildEntryGrid() {
+    final List<Map<String, Object?>> featuredEntries = [
+      // {
+      //   'title': '彰化縣政府',
+      //   'subtitle': '地方政府平台',
+      //   'image': 'assets/homepage/changhua.png',
+      //   'url': 'https://www.chcg.gov.tw/ch2/index.aspx',
+      // },
       {
         'title': '芭樂雲',
         'subtitle': '進入芭樂雲平台',
@@ -201,6 +206,83 @@ class _HomeTabState extends State<HomeTab> {
         'image': 'assets/homepage/grape.jpg',
         'url': null,
       },
+      {
+        'title': '咖啡雲',
+        'subtitle': '進入咖啡平台',
+        'image': 'assets/homepage/coffee.jpeg',
+        'url': null,
+        'fruitName': '咖啡',
+        'groupUUID': '7510d599-1f03-4a07-9cac-a1df02cad742',
+        'observationsEnabled': true,
+        'introduction': '咖啡雲平台介紹內容，可依咖啡作物與服務特色自行編輯。',
+      },
+      {
+        'title': '芒果雲',
+        'subtitle': '進入芒果平台',
+        'image': 'assets/homepage/mango.jpeg',
+        'url': null,
+        'fruitName': '芒果',
+        'groupUUID': '48780a4b-f138-4916-aa46-f19622c317e8',
+        'observationsEnabled': true,
+        'introduction': '芒果雲平台介紹內容，可依芒果作物與服務特色自行編輯。',
+      },
+      {
+        'title': '哈密瓜雲',
+        'subtitle': '進入哈密瓜平台',
+        'image': 'assets/homepage/melon.jpeg',
+        'url': null,
+        'fruitName': '哈密瓜',
+        'groupUUID': '50d44caf-c083-4f0f-b709-5208aa56ac6c',
+        'observationsEnabled': true,
+        'introduction': '哈密瓜雲平台介紹內容，可依哈密瓜作物與服務特色自行編輯。',
+      },
+      {
+        'title': '紅龍果雲',
+        'subtitle': '進入紅龍果平台',
+        'image': 'assets/homepage/dragonfruit.jpeg',
+        'url': null,
+        'fruitName': '紅龍果',
+        'groupUUID': 'f761b767-48f0-4911-956a-3801f00f89cc',
+        'introduction': '紅龍果雲平台介紹內容，可依紅龍果作物與服務特色自行編輯。',
+      },
+      {
+        'title': '小黃瓜雲',
+        'subtitle': '進入小黃瓜平台',
+        'image': 'assets/homepage/cucumber.jpeg',
+        'url': null,
+        'fruitName': '小黃瓜',
+      },
+      {
+        'title': '青蔥雲',
+        'subtitle': '進入青蔥平台',
+        'image': 'assets/homepage/green onion.jpeg',
+        'url': null,
+        'fruitName': '青蔥',
+      },
+      {
+        'title': '甜豆雲',
+        'subtitle': '進入甜豆平台',
+        'image': 'assets/homepage/peas.jpeg',
+        'url': null,
+        'fruitName': '甜豆',
+      },
+      {
+        'title': '稻米雲',
+        'subtitle': '進入稻米平台',
+        'image': 'assets/homepage/rice.jpeg',
+        'url': null,
+        'fruitName': '稻米',
+      },
+      {
+        'title': '花卉雲',
+        'subtitle': '進入花卉平台',
+        'image': 'assets/homepage/flowers.jpeg',
+        'url': null,
+        'fruitName': '花卉',
+      },
+    ];
+
+    final List<Map<String, Object?>> otherEntries = [
       {
         'title': '農作物災害預警',
         'subtitle': '彰化縣作物防災地圖資料',
@@ -300,6 +382,20 @@ class _HomeTabState extends State<HomeTab> {
           context,
           MaterialPageRoute(builder: (_) => const GrapePage()),
         );
+      } else if (e['fruitName'] is String) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => FruitPlatformPage(
+                  fruitName: e['fruitName'].toString(),
+                  groupUUID: e['groupUUID']?.toString(),
+                  observationsEnabled: e['observationsEnabled'] == true,
+                  introduction: e['introduction']?.toString(),
+                  image: e['image']?.toString(),
+                ),
+          ),
+        );
       } else if (title == '白粉病檢測') {
         Navigator.push(
           context,
@@ -335,57 +431,53 @@ class _HomeTabState extends State<HomeTab> {
           context,
           MaterialPageRoute(builder: (_) => const AirQualityForecastPage()),
         );
-      }else if (title == '天氣預報') {
+      } else if (title == '天氣預報') {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const WeatherForecastPage()),
         );
-      }
-      else if (title == '農作物疫情公告') {
+      } else if (title == '農作物疫情公告') {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const PestNoticePage()),
         );
       }
-
-      
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
+    Widget buildGrid(List<Map<String, Object?>> gridEntries) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: gridEntries.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.82,
+        ),
+        itemBuilder: (context, index) {
+          final e = gridEntries[index];
+          if (e.isEmpty) return const SizedBox.expand();
+          return _EntryTile(
+            title: e['title'].toString(),
+            image: e['image']?.toString(),
+            onTap: () => handleEntryTap(context, e),
+          );
+        },
+      );
+    }
 
-        // ✅ 依螢幕寬度決定「一頁看起來像幾格」
-        // 你想更密/更疏可以調這裡
-        int visibleCount = 3; // 手機預設：看起來像 3 格
-        if (w >= 420) visibleCount = 4;
-        if (w >= 600) visibleCount = 5;
-
-        // ✅ item 寬度：讓它像 slider 一樣一行滑
-        // -12 是因為你左右 padding/間距的視覺保留
-        final itemWidth = (w - 12 * (visibleCount - 1)) / visibleCount;
-
-        return SizedBox(
-          height: itemWidth * (3 / 4) + 6 + 52, // ✅ 22 -> 42（保證不爆）
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: entries.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final e = entries[index];
-              return SizedBox(
-                width: itemWidth,
-                child: _EntryTile(
-                  title: e['title'].toString(),
-                  image: e['image'].toString(),
-                  onTap: () => handleEntryTap(context, e),
-                ),
-              );
-            },
-          ),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle("熱門資源入口"),
+        const SizedBox(height: 8),
+        buildGrid(featuredEntries),
+        const SizedBox(height: 24),
+        _buildSectionTitle("其他資源入口"),
+        const SizedBox(height: 8),
+        buildGrid(otherEntries),
+      ],
     );
   }
 
@@ -684,6 +776,4 @@ class _HomeTabState extends State<HomeTab> {
           }).toList(),
     );
   }
-
-  
 }

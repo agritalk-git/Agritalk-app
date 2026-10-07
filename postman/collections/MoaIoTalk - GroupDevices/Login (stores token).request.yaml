@@ -1,0 +1,31 @@
+$kind: http-request
+description: Enter your own username and password in the collection variables. On success, this request saves the response's token as a collection variable for the GroupDevices request.
+url: "{{baseUrl}}/odata/api/v1-Odata/account/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "{{username}}",
+      "password": "{{password}}",
+      "fcm_token": null
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Login succeeded', function () {
+        pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+        const body = pm.response.json();
+        if (typeof body.token !== 'string' || body.token.length === 0) {
+          throw new Error('Login response did not contain a non-empty token.');
+        }
+        pm.collectionVariables.set('token', body.token);
+        console.log('Login token saved to this collection. Keep it private.');
+      }
+    language: text/javascript
+order: 1000

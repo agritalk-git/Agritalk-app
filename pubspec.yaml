@@ -41,6 +41,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_dotenv: ^5.2.1
   http: ^1.3.0
+  intl: ^0.20.2
   google_maps_flutter: ^2.12.1
   syncfusion_flutter_charts: ^29.1.39
   flutter_launcher_icons: ^0.14.3
@@ -114,6 +115,15 @@ flutter:
     - assets/homepage/ChanghuaDisaster.png
     - assets/homepage/weather.png
     - assets/homepage/plant_disease.png
+    - assets/homepage/dragonfruit.jpeg
+    - assets/homepage/melon.jpeg
+    - assets/homepage/mango.jpeg
+    - assets/homepage/coffee.jpeg
+    - assets/homepage/cucumber.jpeg
+    - assets/homepage/green onion.jpeg
+    - assets/homepage/peas.jpeg
+    - assets/homepage/rice.jpeg
+    - assets/homepage/flowers.jpeg
     # - assets/news/pm/pm_poster.png
     # - assets/news/pm/poster.pdf
     

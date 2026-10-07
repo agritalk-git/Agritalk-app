@@ -1,0 +1,520 @@
+{
+  "info": {
+    "name": "CHCG IoT App - API Service Requests",
+    "description": "Request templates for the network APIs implemented in lib/core/api_service.dart. Set variables before sending. Use only with an account and systems you are authorized to access. Requests that change data or control devices are labeled.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://moaiotalk.agritalk.com.tw" },
+    { "key": "diseaseApiUrl", "value": "" },
+    { "key": "diseaseApiBaseUrl", "value": "" },
+    { "key": "moaBaseUrl", "value": "https://data.moa.gov.tw/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "username", "value": "" },
+    { "key": "password", "value": "" },
+    { "key": "fcmToken", "value": "" },
+    { "key": "deviceUUID", "value": "" },
+    { "key": "groupUUID", "value": "" },
+    { "key": "targetUUID", "value": "" },
+    { "key": "featureEnglishName", "value": "Temperature" },
+    { "key": "serialId", "value": "1" },
+    { "key": "startTime", "value": "2026-10-06 00:00:00" },
+    { "key": "endTime", "value": "2026-10-07 00:00:00" },
+    { "key": "aggregate", "value": "hours" },
+    { "key": "recordId", "value": "" },
+    { "key": "itemUUID", "value": "" },
+    { "key": "deviceKey", "value": "" },
+    { "key": "cameraControlUrl", "value": "" },
+    { "key": "cameraUsername", "value": "" },
+    { "key": "cameraPassword", "value": "" },
+    { "key": "cameraMove", "value": "up" },
+    { "key": "cameraZoom", "value": "in" },
+    { "key": "cameraHost", "value": "" },
+    { "key": "cameraPort", "value": "80" },
+    { "key": "cameraPan", "value": "0" },
+    { "key": "cameraTilt", "value": "0" },
+    { "key": "farm", "value": "火龍果" },
+    { "key": "bug", "value": "炭疽病" },
+    { "key": "flag", "value": "" },
+    { "key": "userange", "value": "" },
+    { "key": "fruit", "value": "葡萄" },
+    { "key": "disease", "value": "白粉病" },
+    { "key": "plantType", "value": "" },
+    { "key": "plantCode", "value": "" },
+    { "key": "startDate", "value": "2026-10-06" },
+    { "key": "endDate", "value": "2026-10-07" },
+    { "key": "score", "value": "" },
+    { "key": "startTimeIso", "value": "2026-10-06T00:00:00" },
+    { "key": "endTimeIso", "value": "2026-10-07T00:00:00" },
+    { "key": "cameraIp", "value": "" },
+    { "key": "imagePath", "value": "" },
+    { "key": "imageTag", "value": "" },
+    { "key": "limit", "value": "50" },
+    { "key": "language", "value": "zh" },
+    { "key": "county", "value": "彰化縣" },
+    { "key": "township", "value": "" },
+    { "key": "cropMarketType", "value": "Veg" },
+    { "key": "cropCode", "value": "" },
+    { "key": "marketName", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "MoaIoTalk - Account and device APIs",
+      "item": [
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\",\"fcm_token\":\"{{fcmToken}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  const data = pm.response.json();",
+                "  if (typeof data.token !== 'string' || !data.token) throw new Error('Login response has no token field.');",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  console.log('Token saved to collection variable. Keep it private.');",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "register (creates account)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"username\":\"{{username}}\",\"email\":\"\",\"first_name\":\"\",\"last_name\":\"\",\"job_title\":\"\",\"phone\":\"\",\"password\":\"{{password}}\",\"confirm_password\":\"{{password}}\",\"fcm_token\":\"{{fcmToken}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account/register"
+          },
+          "description": "Creates an account. Supply valid registration fields before sending."
+        },
+        {
+          "name": "deactivateAccount (destructive)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account/deactivate"
+          },
+          "description": "Deactivates the authenticated account. Do not send unless you intend to deactivate it."
+        },
+        {
+          "name": "account",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account"
+          }
+        },
+        {
+          "name": "updateTelegramSetting",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"chat_id\":\"\",\"enabled\":false}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account/telegram"
+          }
+        },
+        {
+          "name": "changePassword",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"old_password\":\"\",\"new_password\":\"\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/account/change-password"
+          }
+        },
+        {
+          "name": "fetchdeviceFeatureName",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/deviceFeatureName" }
+        },
+        {
+          "name": "fetchSystems",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Systems" }
+        },
+        {
+          "name": "fetchTargets",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Targets" }
+        },
+        {
+          "name": "fetchDevices",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Devices?targetUUID={{targetUUID}}" }
+        },
+        {
+          "name": "subscribeDevice (changes subscription)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"enabled\":true,\"notify_on_control\":false,\"channel\":\"\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/Devices('{{deviceKey}}')/subscribe?targetUUID={{targetUUID}}"
+          }
+        },
+        {
+          "name": "getDeviceSubscribeStatus",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Devices('{{deviceKey}}')/subscribe" }
+        },
+        {
+          "name": "fetchMyDeviceSubscriptions",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Devices/Subscriptions" }
+        },
+        {
+          "name": "fetchObservationsLatest",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/ObservationsLatest" }
+        },
+        {
+          "name": "fetchObservationRawData",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Observations/RawData?deviceUUID={{deviceUUID}}&featureEnglishName={{featureEnglishName}}&serialId={{serialId}}&start_time={{startTime}}&end_time={{endTime}}&aggregate={{aggregate}}" }
+        },
+        {
+          "name": "fetchMineRawData",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/Observations/account/RawData?featureEnglishName={{featureEnglishName}}&start_time={{startTime}}&end_time={{endTime}}&aggregate={{aggregate}}&mine=mine" }
+        },
+        {
+          "name": "switchSetting (controls device)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"deviceUUID\":\"{{deviceUUID}}\",\"featureEnglishName\":\"{{featureEnglishName}}\",\"value\":\"OFF\",\"serialId\":\"{{serialId}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/Settings"
+          },
+          "description": "Sends an ON/OFF control command to a device. Verify the device and setting before sending."
+        },
+        {
+          "name": "pulseSetting (controls device)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"deviceUUID\":\"{{deviceUUID}}\",\"featureEnglishName\":\"{{featureEnglishName}}\",\"value\":\"ON\",\"serialId\":\"{{serialId}}\",\"duration_seconds\":1}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/Settings/pulse"
+          },
+          "description": "Pulses a device setting. Verify the target and duration before sending."
+        }
+      ]
+    },
+    {
+      "name": "MoaIoTalk - Groups, schedules and rules",
+      "item": [
+        {
+          "name": "fetchActuatorObservationGroups",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups" }
+        },
+        {
+          "name": "createActuatorObservationGroup",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Test group\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups" },
+          "description": "Creates an ActuatorObservationGroup, not a GroupDevice."
+        },
+        {
+          "name": "deleteActuatorObservationGroup (destructive)",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups('{{groupUUID}}')" }
+        },
+        {
+          "name": "fetchActuatorObservationGroupItems",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups('{{groupUUID}}')/Items" }
+        },
+        {
+          "name": "addActuatorObservationGroupItem",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"deviceUUID\":\"{{deviceUUID}}\",\"featureEnglishName\":\"{{featureEnglishName}}\",\"serialId\":\"{{serialId}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups('{{groupUUID}}')/Items" }
+        },
+        {
+          "name": "deleteActuatorObservationGroupItem (destructive)",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/ActuatorObservationGroups('{{groupUUID}}')/Items?itemUUID={{itemUUID}}" }
+        },
+        {
+          "name": "fetchGroupDevices",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/GroupDevices" }
+        },
+        {
+          "name": "fetchGroupObservation",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/GroupDevices('{{groupUUID}}')/Observations?featureEnglishName={{featureEnglishName}}&start_time={{startTime}}&end_time={{endTime}}&aggregate={{aggregate}}" }
+        },
+        {
+          "name": "fetchGroupScore",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/GroupDevices/score/?groupUUID={{groupUUID}}&fruit={{fruit}}&disease={{disease}}" }
+        },
+        {
+          "name": "fetchGroupScoreHistory",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/GroupDevices/score_history/?groupUUID={{groupUUID}}&fruit={{fruit}}&disease={{disease}}" }
+        },
+        {
+          "name": "fetchGroupCyclic",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/group_cyclic/list?groupUUID={{groupUUID}}" }
+        },
+        {
+          "name": "groupCyclicAdd",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"groupUUID\":\"{{groupUUID}}\",\"start_time\":\"08:00\",\"end_time\":\"18:00\",\"on_minutes\":5,\"off_minutes\":10,\"weekdays\":[\"monday\"],\"enabled\":false}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/group_cyclic/add" },
+          "description": "Creates or updates a group cyclic rule. Starts disabled in this template."
+        },
+        {
+          "name": "groupCyclicDel (destructive)",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"id\":\"{{recordId}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/group_cyclic/del" }
+        },
+        {
+          "name": "fetchschedule",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/schedule/{{deviceUUID}}/{{serialId}}/" }
+        },
+        {
+          "name": "scheduleAdd",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"action\":\"OFF\",\"deviceUUID\":\"{{deviceUUID}}\",\"enabled\":true,\"featureEnglishName\":\"{{featureEnglishName}}\",\"serial_id\":\"{{serialId}}\",\"time\":\"05:00\",\"weekdays\":[\"monday\"]}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/schedule/add/" },
+          "description": "Creates an enabled schedule (the app method hardcodes enabled=true). Verify all fields and the action/time before sending."
+        },
+        {
+          "name": "scheduleDel (destructive)",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"id\":\"{{recordId}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/schedule/delete/" }
+        },
+        {
+          "name": "fetchCondition",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/condition/{{deviceUUID}}/{{serialId}}/" }
+        },
+        {
+          "name": "conditionAdd",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"deviceUUID\":\"{{deviceUUID}}\",\"serial_id\":\"{{serialId}}\",\"action\":\"OFF\",\"enabled\":true,\"rule_id\":null,\"conditions\":[]}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/condition/add/" },
+          "description": "Creates an enabled condition rule (the app method hardcodes enabled=true). Supply valid conditions and verify the action before sending."
+        },
+        {
+          "name": "conditionDel (destructive)",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"id\":\"{{recordId}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/condition/delete/" }
+        },
+        {
+          "name": "fetchCyclic",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/cyclic/{{deviceUUID}}/{{serialId}}/" }
+        },
+        {
+          "name": "cyclicAdd",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"rule_id\":null,\"deviceUUID\":\"{{deviceUUID}}\",\"feature_name\":\"{{featureEnglishName}}\",\"serial_id\":\"{{serialId}}\",\"on_minutes\":5,\"off_minutes\":10,\"start_time\":\"08:00\",\"end_time\":\"18:00\",\"weekdays\":[\"monday\"],\"enabled\":false}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/cyclic/add/" },
+          "description": "Creates or updates a cyclic rule. Starts disabled in this template."
+        },
+        {
+          "name": "cyclicDel (destructive)",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"id\":\"{{recordId}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/cyclic/delete/" }
+        }
+      ]
+    },
+    {
+      "name": "MoaIoTalk - News, market, weather and alert APIs",
+      "item": [
+        {
+          "name": "fetchNews",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/news" }
+        },
+        {
+          "name": "fetchchanghua_coordinate",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_changhua_coordinate_list" }
+        },
+        {
+          "name": "fetchAmis",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/amis" }
+        },
+        {
+          "name": "fetchAmisHistory",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_amis_history?plant_type={{plantType}}&plant_code={{plantCode}}&start_date={{startDate}}&end_date={{endDate}}" }
+        },
+        {
+          "name": "fetchChatgpt",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/chatgpt?groupUUID={{groupUUID}}&fruit={{fruit}}&disease={{disease}}&score={{score}}" }
+        },
+        {
+          "name": "fetchImageDetectHistory",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/image_detect_history?start_time={{startTimeIso}}&end_time={{endTimeIso}}&camera_ip={{cameraIp}}" }
+        },
+        {
+          "name": "fetchImageDetectPath",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "image/*" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"path\":\"{{imagePath}}\",\"tag\":\"{{imageTag}}\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/image_detect_image" }
+        },
+        {
+          "name": "uploadImageDetectNow",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "uploader_name", "value": "", "type": "text" },
+                { "key": "camera_id", "value": "", "type": "text" },
+                { "key": "analysis_photo", "value": "false", "type": "text" },
+                { "key": "files", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/odata/api/v1-Odata/image_detect_image_now"
+          },
+          "description": "Choose a local file for the files form field. Postman generates the multipart boundary."
+        },
+        {
+          "name": "fetchAlertThreshold",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/AlertThreshold?deviceUUID={{deviceUUID}}&featureEnglishName={{featureEnglishName}}&serialId={{serialId}}" }
+        },
+        {
+          "name": "alertThresholdAdd",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"deviceUUID\":\"{{deviceUUID}}\",\"featureEnglishName\":\"{{featureEnglishName}}\",\"serialId\":\"{{serialId}}\",\"highValue\":null,\"lowValue\":null,\"alias\":\"\"}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/odata/api/v1-Odata/AlertThreshold" }
+        },
+        {
+          "name": "alertThresholdDel (destructive)",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/AlertThreshold?deviceUUID={{deviceUUID}}&featureEnglishName={{featureEnglishName}}&serialId={{serialId}}" }
+        },
+        {
+          "name": "fetchAlertHistory",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "{{token}}" }, { "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/AlertHistory?deviceUUID={{deviceUUID}}&featureEnglishName={{featureEnglishName}}&serialId={{serialId}}&limit={{limit}}" }
+        },
+        {
+          "name": "fetchAqfCentral",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "*/*" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_aqf_p_01?language={{language}}" }
+        },
+        {
+          "name": "fetchAqxP221Changhua",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_aqx_p_221" }
+        },
+        {
+          "name": "fetchCwaFd0047019",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_cwa_fd0047_019?county={{county}}&township={{township}}" }
+        },
+        {
+          "name": "fetchpest_notice",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{baseUrl}}/odata/api/v1-Odata/get_pest_notice" }
+        }
+      ]
+    },
+    {
+      "name": "DiseaseApiService",
+      "description": "Uses the DISEASE_API_URL base URL from the app environment. Set the diseaseApiUrl variable to that service's origin.",
+      "item": [
+        {
+          "name": "fetchFarms",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{diseaseApiUrl}}/api/farms?farm={{farm}}" }
+        },
+        {
+          "name": "fetchBugs",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{diseaseApiUrl}}/api/bugs?bug={{bug}}" }
+        },
+        {
+          "name": "fetchBugFarmList",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{diseaseApiUrl}}/api/bug-farm-list?farm={{farm}}&flag={{flag}}&bug={{bug}}&userange={{userange}}" }
+        },
+        {
+          "name": "fetchBugFarmUserange",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{diseaseApiUrl}}/api/bug-farm-userange?farm={{farm}}&bug={{bug}}&flag={{flag}}" }
+        },
+        {
+          "name": "searchAzaiBugs",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Accept-Encoding", "value": "identity" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"term\":\"\",\"ty\":\"y,y,y,y\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiUrl}}/api/azai/search" }
+        },
+        {
+          "name": "fetchAzaiBugPics",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"bug_id\":\"\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiUrl}}/api/azai/bug-pics" }
+        },
+        {
+          "name": "fetchAzaiBugDetail",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"bug_id\":\"\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiUrl}}/api/azai/bug-detail" }
+        }
+      ]
+    },
+    {
+      "name": "DiseaseAzaiApiService",
+      "description": "Uses DISEASE_API_BASE_URL (the app falls back to http://61.216.142.83:10000). Set diseaseApiBaseUrl to the intended service origin.",
+      "item": [
+        {
+          "name": "searchAzaiBugs",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"term\":\"\",\"ty\":\"y,y,y,y\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiBaseUrl}}/api/azai/search" }
+        },
+        {
+          "name": "fetchAzaiBugPics",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"bug_id\":\"\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiBaseUrl}}/api/azai/bug-pics" }
+        },
+        {
+          "name": "fetchAzaiBugDetail",
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"bug_id\":\"\"}", "options": { "raw": { "language": "json" } } }, "url": "{{diseaseApiBaseUrl}}/api/azai/bug-detail" }
+        }
+      ]
+    },
+    {
+      "name": "MOA Public Data API",
+      "description": "Public API at https://data.moa.gov.tw/api/v1/. No auth required.",
+      "item": [
+        {
+          "name": "fetchCropTypes",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{moaBaseUrl}}/CropType/" }
+        },
+        {
+          "name": "fetchMarkets",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{moaBaseUrl}}/CropMarketType/?CropMarketType={{cropMarketType}}" }
+        },
+        {
+          "name": "fetchTransactions",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{moaBaseUrl}}/AgriProductsTransType/?CropCode={{cropCode}}&MarketName={{marketName}}&Start_time={{startDate}}&End_time={{endDate}}" },
+          "description": "tcType is accepted by the app method but is not included in the HTTP query."
+        },
+        {
+          "name": "fetchAutoWeatherStationType",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{moaBaseUrl}}/AutoWeatherStationType/" },
+          "description": "The app's cropMarketType argument is not sent to this endpoint."
+        },
+        {
+          "name": "fetchAutoRainfallStationType",
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{moaBaseUrl}}/AutoRainfallStationType/" },
+          "description": "The app's cropMarketType argument is not sent to this endpoint."
+        }
+      ]
+    },
+    {
+      "name": "Camera control APIs",
+      "description": "These requests target a camera URL supplied by the caller; they are not MoaIoTalk OData endpoints. Set cameraControlUrl and credentials only for a camera you are authorized to control.",
+      "item": [
+        {
+          "name": "cameraControlGetByUrl",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "basic", "basic": [{ "key": "username", "value": "{{cameraUsername}}", "type": "string" }, { "key": "password", "value": "{{cameraPassword}}", "type": "string" }] },
+            "header": [{ "key": "Accept", "value": "application/json, */*" }],
+            "url": "{{cameraControlUrl}}"
+          }
+        },
+        {
+          "name": "cameraMove (controls camera)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "basic", "basic": [{ "key": "username", "value": "{{cameraUsername}}", "type": "string" }, { "key": "password", "value": "{{cameraPassword}}", "type": "string" }] },
+            "header": [{ "key": "Accept", "value": "application/json, */*" }],
+            "url": "{{cameraControlUrl}}?move={{cameraMove}}&channel=0&stream=0"
+          },
+          "description": "Sends a PTZ move command to the configured camera control URL."
+        },
+        {
+          "name": "cameraMove - ISAPI RTSP branch (controls camera)",
+          "request": {
+            "method": "PUT",
+            "auth": { "type": "digest", "digest": [{ "key": "username", "value": "{{cameraUsername}}", "type": "string" }, { "key": "password", "value": "{{cameraPassword}}", "type": "string" }] },
+            "header": [{ "key": "Accept", "value": "*/*" }, { "key": "Content-Type", "value": "application/xml" }, { "key": "Connection", "value": "close" }],
+            "body": { "mode": "raw", "raw": "<PTZData><pan>{{cameraPan}}</pan><tilt>{{cameraTilt}}</tilt><zoom>0</zoom></PTZData>", "options": { "raw": { "language": "xml" } } },
+            "url": "http://{{cameraHost}}:{{cameraPort}}/ISAPI/PTZCtrl/channels/1/continuous"
+          },
+          "description": "RTSP-camera branch of cameraMove. The app first sends a warm-up GET before this PUT. Verify camera host, credentials, and PTZ values before sending."
+        },
+        {
+          "name": "cameraZoom (controls camera)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "basic", "basic": [{ "key": "username", "value": "{{cameraUsername}}", "type": "string" }, { "key": "password", "value": "{{cameraPassword}}", "type": "string" }] },
+            "header": [{ "key": "Accept", "value": "application/json, */*" }],
+            "url": "{{cameraControlUrl}}?zoom={{cameraZoom}}&channel=0&stream=0"
+          },
+          "description": "Sends a zoom command to the configured camera control URL."
+        },
+        {
+          "name": "cameraControlPutByUrl (controls camera)",
+          "request": {
+            "method": "PUT",
+            "auth": { "type": "basic", "basic": [{ "key": "username", "value": "{{cameraUsername}}", "type": "string" }, { "key": "password", "value": "{{cameraPassword}}", "type": "string" }] },
+            "header": [{ "key": "Accept", "value": "*/*" }, { "key": "Content-Type", "value": "application/xml" }],
+            "body": { "mode": "raw", "raw": "<PTZData><pan>0</pan><tilt>0</tilt><zoom>0</zoom></PTZData>", "options": { "raw": { "language": "xml" } } },
+            "url": "{{cameraControlUrl}}"
+          },
+          "description": "Sends a PTZ XML command to the configured camera URL. Verify the camera API's expected XML before sending."
+        }
+      ]
+    }
+  ]
+}

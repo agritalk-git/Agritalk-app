@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 361d72e0-82d8-436a-8bc7-407c0ef8a64d
+
+cloudResources:
+  collections:
+    ../postman/collections/MoaIoTalk - GroupDevices: 1f16dc7d-c2d1-4065-82c5-33f1791b8705
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

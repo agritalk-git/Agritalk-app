@@ -27,7 +27,6 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
   bool loading = false;
 
   final Map<String, String> featureNameMap = {
-    
     'Atmospheric Pressure': '大氣壓力(hPa)',
     'Soil Temperature': '土壤溫度(°C)',
     'Soil Moisture': '土壤濕度(%)',
@@ -46,28 +45,15 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
 
   /// ✅ 番石榴各指標標籤
   final Map<String, List<String>> featureLabelMap = const {
-    'Temperature': [
-      '生育適溫：15–32℃',
-      '著果適溫：23–28℃',
-      '警戒：<15℃寒害、>37℃熱障礙',
-    ],
-    'Precipitation': [
-      '警戒值：日雨量 > 200 mm',
-    ],
-    'Soil Moisture': [
-      '正常值：20–40%',
-    ],
-    'Potential of Hydrogen': [
-      '正常值：pH 5.5–7.5',
-    ],
-    'Soil Electrical Conductivity': [
-      '警戒值：>1000（鹽害風險）',
-    ],
+    'Temperature': ['生育適溫：15–32℃', '著果適溫：23–28℃', '警戒：<15℃寒害、>37℃熱障礙'],
+    'Precipitation': ['警戒值：日雨量 > 200 mm'],
+    'Soil Moisture': ['正常值：20–40%'],
+    'Potential of Hydrogen': ['正常值：pH 5.5–7.5'],
+    'Soil Electrical Conductivity': ['警戒值：>1000（鹽害風險）'],
   };
 
   /// ✅ 加入降雨量
   final List<String> features = const [
-    
     'Temperature',
     'Humidity',
     'Luminance',
@@ -99,63 +85,73 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final isLoggedIn = token != null && token.isNotEmpty && token != 'GUEST_MODE';
+    final isLoggedIn =
+        token != null && token.isNotEmpty && token != 'GUEST_MODE';
 
     final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
     final Map<String, List<ChartData>> nextMyData = {};
 
-    await Future.wait(features.map((feature) async {
-      nextGroupSeries[feature] = {};
+    await Future.wait(
+      features.map((feature) async {
+        nextGroupSeries[feature] = {};
 
-      // 1) 群組多地點並行抓
-      final groupTasks = groups.map((g) async {
-        final uuid = g['uuid']!;
-        final label = g['label']!;
+        // 1) 群組多地點並行抓
+        final groupTasks =
+            groups.map((g) async {
+              final uuid = g['uuid']!;
+              final label = g['label']!;
 
-        final data = await apiService.fetchGroupObservation(
-          groupUUID: uuid,
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+              final data = await apiService.fetchGroupObservation(
+                groupUUID: uuid,
+                featureEnglishName: feature,
+                startTime: startTime,
+                endTime: endTime,
+                aggregate: "hours",
+              );
 
-        final points = (data ?? [])
-            .map<ChartData>((item) => ChartData(
-                  DateTime.parse(item['time']),
-                  double.tryParse(item['value'].toString()) ?? 0,
-                ))
-            .toList()
-          ..sort((a, b) => a.time.compareTo(b.time));
+              final points =
+                  (data ?? [])
+                      .map<ChartData>(
+                        (item) => ChartData(
+                          DateTime.parse(item['time']),
+                          double.tryParse(item['value'].toString()) ?? 0,
+                        ),
+                      )
+                      .toList()
+                    ..sort((a, b) => a.time.compareTo(b.time));
 
-        return MapEntry(label, points);
-      }).toList();
+              return MapEntry(label, points);
+            }).toList();
 
-      final groupResults = await Future.wait(groupTasks);
-      for (final e in groupResults) {
-        nextGroupSeries[feature]![e.key] = e.value;
-      }
+        final groupResults = await Future.wait(groupTasks);
+        for (final e in groupResults) {
+          nextGroupSeries[feature]![e.key] = e.value;
+        }
 
-      // 2) 我的數據（可選）
-      if (isLoggedIn) {
-        final mydata = await apiService.fetchMineRawData(
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+        // 2) 我的數據（可選）
+        if (isLoggedIn) {
+          final mydata = await apiService.fetchMineRawData(
+            featureEnglishName: feature,
+            startTime: startTime,
+            endTime: endTime,
+            aggregate: "hours",
+          );
 
-        nextMyData[feature] = (mydata ?? [])
-            .map<ChartData>((item) => ChartData(
-                  DateTime.parse(item['time']),
-                  double.tryParse(item['value'].toString()) ?? 0,
-                ))
-            .toList()
-          ..sort((a, b) => a.time.compareTo(b.time));
-      } else {
-        nextMyData[feature] = const [];
-      }
-    }));
+          nextMyData[feature] =
+              (mydata ?? [])
+                  .map<ChartData>(
+                    (item) => ChartData(
+                      DateTime.parse(item['time']),
+                      double.tryParse(item['value'].toString()) ?? 0,
+                    ),
+                  )
+                  .toList()
+                ..sort((a, b) => a.time.compareTo(b.time));
+        } else {
+          nextMyData[feature] = const [];
+        }
+      }),
+    );
 
     if (!mounted) return;
     setState(() {
@@ -197,106 +193,118 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final bigText = MediaQuery.textScaleFactorOf(context) >= 1.25;
-                      final narrow = c.maxWidth < 360;
-                      final stackVertical = bigText || narrow;
+      body:
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final bigText =
+                            MediaQuery.textScaleFactorOf(context) >= 1.25;
+                        final narrow = c.maxWidth < 360;
+                        final stackVertical = bigText || narrow;
 
-                      final startLabel = '開始：${DateFormat('yyyy-MM-dd').format(startTime)}';
-                      final endLabel = '結束：${DateFormat('yyyy-MM-dd').format(endTime)}';
+                        final startLabel =
+                            '開始：${DateFormat('yyyy-MM-dd').format(startTime)}';
+                        final endLabel =
+                            '結束：${DateFormat('yyyy-MM-dd').format(endTime)}';
 
-                      Widget dateBtn({
-                        required VoidCallback onPressed,
-                        required IconData icon,
-                        required String text,
-                      }) {
-                        return ElevatedButton.icon(
-                          onPressed: onPressed,
-                          icon: Icon(icon, size: 18),
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(text),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            minimumSize: const Size(0, 44),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                          ),
-                        );
-                      }
-
-                      if (stackVertical) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            dateBtn(
-                              onPressed: () => _selectDate(isStart: true),
-                              icon: Icons.calendar_month_rounded,
-                              text: startLabel,
+                        Widget dateBtn({
+                          required VoidCallback onPressed,
+                          required IconData icon,
+                          required String text,
+                        }) {
+                          return ElevatedButton.icon(
+                            onPressed: onPressed,
+                            icon: Icon(icon, size: 18),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(text),
                             ),
-                            const SizedBox(height: 10),
-                            dateBtn(
-                              onPressed: () => _selectDate(isStart: false),
-                              icon: Icons.event_rounded,
-                              text: endLabel,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              minimumSize: const Size(0, 44),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (stackVertical) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              dateBtn(
+                                onPressed: () => _selectDate(isStart: true),
+                                icon: Icons.calendar_month_rounded,
+                                text: startLabel,
+                              ),
+                              const SizedBox(height: 10),
+                              dateBtn(
+                                onPressed: () => _selectDate(isStart: false),
+                                icon: Icons.event_rounded,
+                                text: endLabel,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: dateBtn(
+                                onPressed: () => _selectDate(isStart: true),
+                                icon: Icons.calendar_month_rounded,
+                                text: startLabel,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: dateBtn(
+                                onPressed: () => _selectDate(isStart: false),
+                                icon: Icons.event_rounded,
+                                text: endLabel,
+                              ),
                             ),
                           ],
                         );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: dateBtn(
-                              onPressed: () => _selectDate(isStart: true),
-                              icon: Icons.calendar_month_rounded,
-                              text: startLabel,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: dateBtn(
-                              onPressed: () => _selectDate(isStart: false),
-                              icon: Icons.event_rounded,
-                              text: endLabel,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                      },
+                    ),
                   ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: features.length,
-                    itemBuilder: (context, index) {
-                      final feature = features[index];
-                      final seriesMap = groupSeriesByFeature[feature] ?? {};
-                      final myData = myChartDataMap[feature] ?? const [];
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: features.length,
+                      itemBuilder: (context, index) {
+                        final feature = features[index];
+                        final seriesMap = groupSeriesByFeature[feature] ?? {};
+                        final myData = myChartDataMap[feature] ?? const [];
 
-                      return FeatureChart(
-                        feature: feature,
-                        title: featureNameMap[feature] ?? feature,
-                        labels: featureLabelMap[feature] ?? const [],
-                        groupSeries: seriesMap,
-                        myData: myData,
-                        rangeStart: startTime,
-                        rangeEnd: endTime,
-                      );
-                    },
+                        return FeatureChart(
+                          feature: feature,
+                          title: featureNameMap[feature] ?? feature,
+                          labels: featureLabelMap[feature] ?? const [],
+                          groupSeries: seriesMap,
+                          myData: myData,
+                          rangeStart: startTime,
+                          rangeEnd: endTime,
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
     );
   }
 }
@@ -325,7 +333,8 @@ class FeatureChart extends StatefulWidget {
   State<FeatureChart> createState() => _FeatureChartState();
 }
 
-class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClientMixin {
+class _FeatureChartState extends State<FeatureChart>
+    with AutomaticKeepAliveClientMixin {
   late TooltipBehavior tooltipBehavior;
 
   @override
@@ -367,26 +376,25 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
       );
     }
 
-    final hasAnyData = seriesList.whereType<LineSeries<ChartData, DateTime>>().isNotEmpty;
+    final hasAnyData =
+        seriesList.whereType<LineSeries<ChartData, DateTime>>().isNotEmpty;
 
     final _PrimaryLine primary = _pickPrimaryLine(
       myData: widget.myData,
       groupSeries: widget.groupSeries,
     );
 
-    final _Stats? stats = primary.points.isEmpty ? null : _calcStats(primary.points);
+    final _Stats? stats =
+        primary.points.isEmpty ? null : _calcStats(primary.points);
 
-    final int expectedHours = _expectedHourlyCount(widget.rangeStart, widget.rangeEnd);
-    final int actualCount = primary.points.length;
-    final double completeness = expectedHours <= 0 ? 0 : (actualCount / expectedHours).clamp(0.0, 1.0);
-
-    final List<_InsightChip> chips = stats == null
-        ? const []
-        : _buildInsights(
-            feature: widget.feature,
-            stats: stats,
-            points: primary.points,
-          );
+    final List<_InsightChip> chips =
+        stats == null
+            ? const []
+            : _buildInsights(
+              feature: widget.feature,
+              stats: stats,
+              points: primary.points,
+            );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -403,12 +411,20 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
                   Expanded(
                     child: Text(
                       widget.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
                     tooltip: '這個數值對番石榴有什麼意義？',
-                    onPressed: () => _showInfoSheet(context, widget.feature, widget.title),
+                    onPressed:
+                        () => _showInfoSheet(
+                          context,
+                          widget.feature,
+                          widget.title,
+                        ),
                     icon: const Icon(Icons.info_outline_rounded),
                   ),
                 ],
@@ -419,52 +435,48 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: widget.labels.map((label) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3E8FF),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0xFFD6BCFA)),
-                      ),
-                      child: Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B46C1),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  children:
+                      widget.labels.map((label) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E8FF),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFD6BCFA)),
+                          ),
+                          child: Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF6B46C1),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 ),
                 const SizedBox(height: 10),
               ],
-
-              if (stats != null)
-                _SummaryRow(
-                  sourceLabel: primary.label,
-                  latest: stats.latest,
-                  avg: stats.avg,
-                  min: stats.min,
-                  max: stats.max,
-                  trend6h: stats.trend6h,
-                  completeness: completeness,
-                ),
 
               if (stats != null && chips.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: chips.map((c) {
-                    return Chip(
-                      avatar: Icon(c.icon, size: 18),
-                      label: Text(c.text),
-                      backgroundColor: c.bg,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                    );
-                  }).toList(),
+                  children:
+                      chips.map((c) {
+                        return Chip(
+                          avatar: Icon(c.icon, size: 18),
+                          label: Text(c.text),
+                          backgroundColor: c.bg,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      }).toList(),
                 ),
               ],
 
@@ -527,7 +539,13 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(info.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text(
+                    info.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _InfoSection(
                     icon: Icons.lightbulb_outline_rounded,
@@ -578,83 +596,6 @@ class ChartData {
   ChartData(this.time, this.value);
 }
 
-class _SummaryRow extends StatelessWidget {
-  final String sourceLabel;
-  final double latest;
-  final double avg;
-  final double min;
-  final double max;
-  final double trend6h;
-  final double completeness;
-
-  const _SummaryRow({
-    required this.sourceLabel,
-    required this.latest,
-    required this.avg,
-    required this.min,
-    required this.max,
-    required this.trend6h,
-    required this.completeness,
-  });
-
-  String _fmt(double v) {
-    if (v.abs() >= 100) return v.toStringAsFixed(0);
-    if (v.abs() >= 10) return v.toStringAsFixed(1);
-    return v.toStringAsFixed(2);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scale = MediaQuery.textScaleFactorOf(context);
-    final pct = (completeness * 100).round();
-
-    final trendText = trend6h == 0
-        ? '持平'
-        : (trend6h > 0 ? '+${_fmt(trend6h)}' : _fmt(trend6h));
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.black.withOpacity(0.04),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '摘要（來源：$sourceLabel）',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13 * scale),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            children: [
-              _kv('最新', _fmt(latest)),
-              _kv('平均', _fmt(avg)),
-              _kv('最大', _fmt(max)),
-              _kv('最小', _fmt(min)),
-              _kv('近6小時', trendText),
-              // _kv('完整度', '$pct%'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _kv(String k, String v) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('$k：', style: const TextStyle(color: Colors.black54)),
-        Text(v, style: const TextStyle(fontWeight: FontWeight.w800)),
-      ],
-    );
-  }
-}
-
 class _FeatureInfo {
   final String title;
   final String why;
@@ -683,7 +624,8 @@ _FeatureInfo _featureInfo(String feature, String title) {
       return _FeatureInfo(
         title: title,
         why: '番石榴生育適溫為 15–32℃，著果適溫為 23–28℃。溫度過低會影響新梢與果實發育，過高則會造成授粉不良與熱障礙。',
-        watch: '<15℃ 時要注意寒害，可能出現新梢生長停滯、葉片紫紅、果實表皮受損出現紅點、花粉發芽率下降。>37℃ 時要注意熱障礙，花粉萌芽率降低，進而影響授粉。',
+        watch:
+            '<15℃ 時要注意寒害，可能出現新梢生長停滯、葉片紫紅、果實表皮受損出現紅點、花粉發芽率下降。>37℃ 時要注意熱障礙，花粉萌芽率降低，進而影響授粉。',
         action: '預防：調整留果數，施用鈣、鉀肥。復原：輕度修剪，加強肥培，促進樹勢恢復。',
         reference: references,
       );
@@ -789,19 +731,9 @@ _PrimaryLine _pickPrimaryLine({
 class _Stats {
   final double latest;
   final double avg;
-  final double min;
-  final double max;
   final double sd;
-  final double trend6h;
 
-  const _Stats({
-    required this.latest,
-    required this.avg,
-    required this.min,
-    required this.max,
-    required this.sd,
-    required this.trend6h,
-  });
+  const _Stats({required this.latest, required this.avg, required this.sd});
 }
 
 _Stats _calcStats(List<ChartData> points) {
@@ -809,12 +741,8 @@ _Stats _calcStats(List<ChartData> points) {
   final latest = points.last.value;
 
   double sum = 0;
-  double minV = values.first;
-  double maxV = values.first;
   for (final v in values) {
     sum += v;
-    if (v < minV) minV = v;
-    if (v > maxV) maxV = v;
   }
   final avg = sum / values.length;
 
@@ -825,22 +753,7 @@ _Stats _calcStats(List<ChartData> points) {
   }
   final sd = math.sqrt(varSum / math.max(1, values.length));
 
-  final targetTime = points.last.time.subtract(const Duration(hours: 6));
-  ChartData nearest = points.first;
-  for (final p in points) {
-    if ((p.time.difference(targetTime)).abs() < (nearest.time.difference(targetTime)).abs()) {
-      nearest = p;
-    }
-  }
-  final trend6h = latest - nearest.value;
-
-  return _Stats(latest: latest, avg: avg, min: minV, max: maxV, sd: sd, trend6h: trend6h);
-}
-
-int _expectedHourlyCount(DateTime start, DateTime end) {
-  if (end.isBefore(start)) return 0;
-  final diff = end.difference(start);
-  return diff.inHours + 1;
+  return _Stats(latest: latest, avg: avg, sd: sd);
 }
 
 class _InsightChip {
@@ -863,13 +776,37 @@ List<_InsightChip> _buildInsights({
   switch (feature) {
     case 'Temperature':
       if (stats.latest < 15) {
-        chips.add(_InsightChip('低溫警戒（<15℃，注意寒害）', Icons.ac_unit_outlined, const Color(0xFFE8EAF6)));
+        chips.add(
+          _InsightChip(
+            '低溫警戒（<15℃，注意寒害）',
+            Icons.ac_unit_outlined,
+            const Color(0xFFE8EAF6),
+          ),
+        );
       } else if (stats.latest > 37) {
-        chips.add(_InsightChip('高溫警戒（>37℃，注意熱障礙）', Icons.local_fire_department_outlined, const Color(0xFFFFEBEE)));
+        chips.add(
+          _InsightChip(
+            '高溫警戒（>37℃，注意熱障礙）',
+            Icons.local_fire_department_outlined,
+            const Color(0xFFFFEBEE),
+          ),
+        );
       } else if (stats.latest >= 23 && stats.latest <= 28) {
-        chips.add(_InsightChip('著果適溫區間（23–28℃）', Icons.check_circle_outline, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '著果適溫區間（23–28℃）',
+            Icons.check_circle_outline,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       } else if (stats.latest >= 15 && stats.latest <= 32) {
-        chips.add(_InsightChip('生育適溫區間（15–32℃）', Icons.eco_outlined, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '生育適溫區間（15–32℃）',
+            Icons.eco_outlined,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       }
       break;
 
@@ -883,43 +820,80 @@ List<_InsightChip> _buildInsights({
       }
 
       if (sum24h > 200) {
-        chips.add(_InsightChip('日雨量警戒（近24小時 > 200 mm）', Icons.umbrella_outlined, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip(
+            '日雨量警戒（近24小時 > 200 mm）',
+            Icons.umbrella_outlined,
+            const Color(0xFFE3F2FD),
+          ),
+        );
       } else if (stats.latest >= 1.0) {
-        chips.add(_InsightChip('目前有降雨', Icons.umbrella_outlined, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip(
+            '目前有降雨',
+            Icons.umbrella_outlined,
+            const Color(0xFFE3F2FD),
+          ),
+        );
       }
       break;
 
     case 'Soil Moisture':
       if (stats.latest < 20) {
-        chips.add(_InsightChip('土壤偏乾（<20%）', Icons.grass_outlined, const Color(0xFFFFF3E0)));
+        chips.add(
+          _InsightChip(
+            '土壤偏乾（<20%）',
+            Icons.grass_outlined,
+            const Color(0xFFFFF3E0),
+          ),
+        );
       } else if (stats.latest > 40) {
-        chips.add(_InsightChip('土壤偏濕（>40%）', Icons.waves_outlined, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '土壤偏濕（>40%）',
+            Icons.waves_outlined,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       } else {
-        chips.add(_InsightChip('土壤濕度正常（20–40%）', Icons.check_circle_outline, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '土壤濕度正常（20–40%）',
+            Icons.check_circle_outline,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       }
       break;
 
     case 'Potential of Hydrogen':
-      if (stats.latest < 5.5) {
-        chips.add(_InsightChip('pH 偏低（<5.5）', Icons.warning_amber_rounded, const Color(0xFFFFF8E1)));
-      } else if (stats.latest > 7.5) {
-        chips.add(_InsightChip('pH 偏高（>7.5）', Icons.warning_amber_rounded, const Color(0xFFFFF8E1)));
-      } else {
-        chips.add(_InsightChip('pH 正常（5.5–7.5）', Icons.check_circle_outline, const Color(0xFFE8F5E9)));
-      }
       break;
 
     case 'Soil Electrical Conductivity':
       if (stats.latest > 1000) {
-        chips.add(_InsightChip('EC 過高（>1000，鹽害風險）', Icons.science_outlined, const Color(0xFFFFF8E1)));
+        chips.add(
+          _InsightChip(
+            'EC 過高（>1000，鹽害風險）',
+            Icons.science_outlined,
+            const Color(0xFFFFF8E1),
+          ),
+        );
       }
       break;
 
     default:
       if (stats.latest >= hi) {
-        chips.add(_InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)),
+        );
       } else if (stats.latest <= lo) {
-        chips.add(_InsightChip('目前偏低（相對）', Icons.trending_down, const Color(0xFFFFEBEE)));
+        chips.add(
+          _InsightChip(
+            '目前偏低（相對）',
+            Icons.trending_down,
+            const Color(0xFFFFEBEE),
+          ),
+        );
       }
       break;
   }

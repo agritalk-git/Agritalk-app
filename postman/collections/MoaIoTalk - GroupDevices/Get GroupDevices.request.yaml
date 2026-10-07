@@ -1,0 +1,8 @@
+$kind: http-request
+description: Run Login first. Inspect the response's value array for group names and GroupDevice UUIDs; nested device UUIDs are different.
+url: "{{baseUrl}}/odata/api/v1-Odata/GroupDevices"
+method: GET
+headers:
+  accept: application/json
+  Authorization: "{{token}}"
+order: 2000

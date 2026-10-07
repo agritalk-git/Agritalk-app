@@ -1,0 +1,7 @@
+$kind: collection
+description: Log in to MoaIoTalk and fetch GroupDevices using the returned token. Set the username and password collection variables before running the login request.
+variables:
+  baseUrl: https://moaiotalk.agritalk.com.tw
+  username: root
+  password: Aa85119676!
+  token: ""

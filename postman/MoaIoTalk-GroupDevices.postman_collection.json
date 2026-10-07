@@ -1,0 +1,113 @@
+{
+  "info": {
+    "name": "MoaIoTalk - GroupDevices",
+    "description": "Log in to MoaIoTalk and fetch GroupDevices using the returned token. Set the username and password collection variables before running the login request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://moaiotalk.agritalk.com.tw"
+    },
+    {
+      "key": "username",
+      "value": "root"
+    },
+    {
+      "key": "password",
+      "value": "Aa85119676!"
+    },
+    {
+      "key": "token",
+      "value": "Bearer 9fbf754a783b2f63f25fb4b8c4773db528f91bc8"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login (stores token)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"fcm_token\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/odata/api/v1-Odata/account/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "odata",
+            "api",
+            "v1-Odata",
+            "account",
+            "login"
+          ]
+        },
+        "description": "Enter your own username and password in the collection variables. On success, this request saves the response's token as a collection variable for the GroupDevices request."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login succeeded', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  if (typeof body.token !== 'string' || body.token.length === 0) {",
+              "    throw new Error('Login response did not contain a non-empty token.');",
+              "  }",
+              "  pm.collectionVariables.set('token', body.token);",
+              "  console.log('Login token saved to this collection. Keep it private.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get GroupDevices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/odata/api/v1-Odata/GroupDevices",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "odata",
+            "api",
+            "v1-Odata",
+            "GroupDevices"
+          ]
+        },
+        "description": "Run Login first. Inspect the response's value array for group names and GroupDevice UUIDs; nested device UUIDs are different."
+      }
+    }
+  ]
+}

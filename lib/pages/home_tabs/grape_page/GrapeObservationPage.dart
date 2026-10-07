@@ -45,7 +45,6 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
 
   /// ✅ 加入降雨量
   final List<String> features = const [
-
     'Temperature',
     'Humidity',
     'Luminance',
@@ -77,64 +76,74 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final isLoggedIn = token != null && token.isNotEmpty && token != 'GUEST_MODE';
+    final isLoggedIn =
+        token != null && token.isNotEmpty && token != 'GUEST_MODE';
 
     final Map<String, Map<String, List<ChartData>>> nextGroupSeries = {};
     final Map<String, List<ChartData>> nextMyData = {};
 
     // ✅ feature 層級並行
-    await Future.wait(features.map((feature) async {
-      nextGroupSeries[feature] = {};
+    await Future.wait(
+      features.map((feature) async {
+        nextGroupSeries[feature] = {};
 
-      // ✅ group 層級並行
-      final groupTasks = groups.map((g) async {
-        final uuid = g['uuid']!;
-        final label = g['label']!;
+        // ✅ group 層級並行
+        final groupTasks =
+            groups.map((g) async {
+              final uuid = g['uuid']!;
+              final label = g['label']!;
 
-        final data = await apiService.fetchGroupObservation(
-          groupUUID: uuid,
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+              final data = await apiService.fetchGroupObservation(
+                groupUUID: uuid,
+                featureEnglishName: feature,
+                startTime: startTime,
+                endTime: endTime,
+                aggregate: "hours",
+              );
 
-        final points = (data ?? [])
-            .map<ChartData>((item) => ChartData(
-                  DateTime.parse(item['time']),
-                  double.tryParse(item['value'].toString()) ?? 0,
-                ))
-            .toList()
-          ..sort((a, b) => a.time.compareTo(b.time));
+              final points =
+                  (data ?? [])
+                      .map<ChartData>(
+                        (item) => ChartData(
+                          DateTime.parse(item['time']),
+                          double.tryParse(item['value'].toString()) ?? 0,
+                        ),
+                      )
+                      .toList()
+                    ..sort((a, b) => a.time.compareTo(b.time));
 
-        return MapEntry(label, points);
-      }).toList();
+              return MapEntry(label, points);
+            }).toList();
 
-      final groupResults = await Future.wait(groupTasks);
-      for (final e in groupResults) {
-        nextGroupSeries[feature]![e.key] = e.value;
-      }
+        final groupResults = await Future.wait(groupTasks);
+        for (final e in groupResults) {
+          nextGroupSeries[feature]![e.key] = e.value;
+        }
 
-      // ✅ 我的資料（同一個 feature 也照抓）
-      if (isLoggedIn) {
-        final mydata = await apiService.fetchMineRawData(
-          featureEnglishName: feature,
-          startTime: startTime,
-          endTime: endTime,
-          aggregate: "hours",
-        );
+        // ✅ 我的資料（同一個 feature 也照抓）
+        if (isLoggedIn) {
+          final mydata = await apiService.fetchMineRawData(
+            featureEnglishName: feature,
+            startTime: startTime,
+            endTime: endTime,
+            aggregate: "hours",
+          );
 
-        nextMyData[feature] = (mydata ?? [])
-            .map<ChartData>((item) => ChartData(
-                  DateTime.parse(item['time']),
-                  double.tryParse(item['value'].toString()) ?? 0,
-                ))
-            .toList()
-          ..sort((a, b) => a.time.compareTo(b.time));
-      } else {
-        nextMyData[feature] = const [];
-      }
-    }));
+          nextMyData[feature] =
+              (mydata ?? [])
+                  .map<ChartData>(
+                    (item) => ChartData(
+                      DateTime.parse(item['time']),
+                      double.tryParse(item['value'].toString()) ?? 0,
+                    ),
+                  )
+                  .toList()
+                ..sort((a, b) => a.time.compareTo(b.time));
+        } else {
+          nextMyData[feature] = const [];
+        }
+      }),
+    );
 
     if (!mounted) return;
     setState(() {
@@ -176,106 +185,118 @@ class _GrapeObservationPageState extends State<GrapeObservationPage> {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // ✅ 日期選擇：小螢幕/大字體自適應
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final bigText = MediaQuery.textScaleFactorOf(context) >= 1.25;
-                      final narrow = c.maxWidth < 360;
-                      final stackVertical = bigText || narrow;
+      body:
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  // ✅ 日期選擇：小螢幕/大字體自適應
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final bigText =
+                            MediaQuery.textScaleFactorOf(context) >= 1.25;
+                        final narrow = c.maxWidth < 360;
+                        final stackVertical = bigText || narrow;
 
-                      final startLabel = '開始：${DateFormat('yyyy-MM-dd').format(startTime)}';
-                      final endLabel = '結束：${DateFormat('yyyy-MM-dd').format(endTime)}';
+                        final startLabel =
+                            '開始：${DateFormat('yyyy-MM-dd').format(startTime)}';
+                        final endLabel =
+                            '結束：${DateFormat('yyyy-MM-dd').format(endTime)}';
 
-                      Widget dateBtn({
-                        required VoidCallback onPressed,
-                        required IconData icon,
-                        required String text,
-                      }) {
-                        return ElevatedButton.icon(
-                          onPressed: onPressed,
-                          icon: Icon(icon, size: 18),
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(text),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            minimumSize: const Size(0, 44),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                          ),
-                        );
-                      }
-
-                      if (stackVertical) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            dateBtn(
-                              onPressed: () => _selectDate(isStart: true),
-                              icon: Icons.calendar_month_rounded,
-                              text: startLabel,
+                        Widget dateBtn({
+                          required VoidCallback onPressed,
+                          required IconData icon,
+                          required String text,
+                        }) {
+                          return ElevatedButton.icon(
+                            onPressed: onPressed,
+                            icon: Icon(icon, size: 18),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(text),
                             ),
-                            const SizedBox(height: 10),
-                            dateBtn(
-                              onPressed: () => _selectDate(isStart: false),
-                              icon: Icons.event_rounded,
-                              text: endLabel,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              minimumSize: const Size(0, 44),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (stackVertical) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              dateBtn(
+                                onPressed: () => _selectDate(isStart: true),
+                                icon: Icons.calendar_month_rounded,
+                                text: startLabel,
+                              ),
+                              const SizedBox(height: 10),
+                              dateBtn(
+                                onPressed: () => _selectDate(isStart: false),
+                                icon: Icons.event_rounded,
+                                text: endLabel,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: dateBtn(
+                                onPressed: () => _selectDate(isStart: true),
+                                icon: Icons.calendar_month_rounded,
+                                text: startLabel,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: dateBtn(
+                                onPressed: () => _selectDate(isStart: false),
+                                icon: Icons.event_rounded,
+                                text: endLabel,
+                              ),
                             ),
                           ],
                         );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: dateBtn(
-                              onPressed: () => _selectDate(isStart: true),
-                              icon: Icons.calendar_month_rounded,
-                              text: startLabel,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: dateBtn(
-                              onPressed: () => _selectDate(isStart: false),
-                              icon: Icons.event_rounded,
-                              text: endLabel,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                      },
+                    ),
                   ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: features.length,
-                    itemBuilder: (context, index) {
-                      final feature = features[index];
-                      final seriesMap = groupSeriesByFeature[feature] ?? {};
-                      final myData = myChartDataMap[feature] ?? const [];
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: features.length,
+                      itemBuilder: (context, index) {
+                        final feature = features[index];
+                        final seriesMap = groupSeriesByFeature[feature] ?? {};
+                        final myData = myChartDataMap[feature] ?? const [];
 
-                      return FeatureChart(
-                        feature: feature,
-                        title: featureNameMap[feature] ?? feature,
-                        groupSeries: seriesMap,
-                        myData: myData,
-                        rangeStart: startTime,
-                        rangeEnd: endTime,
-                      );
-                    },
+                        return FeatureChart(
+                          feature: feature,
+                          title: featureNameMap[feature] ?? feature,
+                          groupSeries: seriesMap,
+                          myData: myData,
+                          rangeStart: startTime,
+                          rangeEnd: endTime,
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
     );
   }
 }
@@ -303,7 +324,8 @@ class FeatureChart extends StatefulWidget {
   State<FeatureChart> createState() => _FeatureChartState();
 }
 
-class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClientMixin {
+class _FeatureChartState extends State<FeatureChart>
+    with AutomaticKeepAliveClientMixin {
   late TooltipBehavior tooltipBehavior;
 
   @override
@@ -345,26 +367,25 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
       );
     }
 
-    final hasAnyData = seriesList.whereType<LineSeries<ChartData, DateTime>>().isNotEmpty;
+    final hasAnyData =
+        seriesList.whereType<LineSeries<ChartData, DateTime>>().isNotEmpty;
 
     final _PrimaryLine primary = _pickPrimaryLine(
       myData: widget.myData,
       groupSeries: widget.groupSeries,
     );
 
-    final _Stats? stats = primary.points.isEmpty ? null : _calcStats(primary.points);
+    final _Stats? stats =
+        primary.points.isEmpty ? null : _calcStats(primary.points);
 
-    final int expectedHours = _expectedHourlyCount(widget.rangeStart, widget.rangeEnd);
-    final int actualCount = primary.points.length;
-    final double completeness = expectedHours <= 0 ? 0 : (actualCount / expectedHours).clamp(0.0, 1.0);
-
-    final List<_InsightChip> chips = stats == null
-        ? const []
-        : _buildInsightsGrape(
-            feature: widget.feature,
-            stats: stats,
-            points: primary.points,
-          );
+    final List<_InsightChip> chips =
+        stats == null
+            ? const []
+            : _buildInsightsGrape(
+              feature: widget.feature,
+              stats: stats,
+              points: primary.points,
+            );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -382,42 +403,44 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
                   Expanded(
                     child: Text(
                       widget.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
                     tooltip: '這個數值對葡萄有什麼意義？',
-                    onPressed: () => _showInfoSheet(context, widget.feature, widget.title),
+                    onPressed:
+                        () => _showInfoSheet(
+                          context,
+                          widget.feature,
+                          widget.title,
+                        ),
                     icon: const Icon(Icons.info_outline_rounded),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
 
-              if (stats != null)
-                _SummaryRow(
-                  sourceLabel: primary.label,
-                  latest: stats.latest,
-                  avg: stats.avg,
-                  min: stats.min,
-                  max: stats.max,
-                  trend6h: stats.trend6h,
-                  completeness: completeness,
-                ),
-
               if (stats != null && chips.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: chips
-                      .map((c) => Chip(
-                            avatar: Icon(c.icon, size: 18),
-                            label: Text(c.text),
-                            backgroundColor: c.bg,
-                            labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                          ))
-                      .toList(),
+                  children:
+                      chips
+                          .map(
+                            (c) => Chip(
+                              avatar: Icon(c.icon, size: 18),
+                              label: Text(c.text),
+                              backgroundColor: c.bg,
+                              labelStyle: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                          .toList(),
                 ),
               ],
 
@@ -480,7 +503,13 @@ class _FeatureChartState extends State<FeatureChart> with AutomaticKeepAliveClie
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(info.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text(
+                    info.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _InfoSection(
                     icon: Icons.lightbulb_outline_rounded,
@@ -532,83 +561,6 @@ class ChartData {
 }
 
 /// =======================
-/// Summary UI
-/// =======================
-class _SummaryRow extends StatelessWidget {
-  final String sourceLabel;
-  final double latest;
-  final double avg;
-  final double min;
-  final double max;
-  final double trend6h;
-  final double completeness;
-
-  const _SummaryRow({
-    required this.sourceLabel,
-    required this.latest,
-    required this.avg,
-    required this.min,
-    required this.max,
-    required this.trend6h,
-    required this.completeness,
-  });
-
-  String _fmt(double v) {
-    if (v.abs() >= 100) return v.toStringAsFixed(0);
-    if (v.abs() >= 10) return v.toStringAsFixed(1);
-    return v.toStringAsFixed(2);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scale = MediaQuery.textScaleFactorOf(context);
-    final pct = (completeness * 100).round();
-    final trendText = trend6h == 0 ? '持平' : (trend6h > 0 ? '+${_fmt(trend6h)}' : _fmt(trend6h));
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.black.withOpacity(0.04),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '摘要（來源：$sourceLabel）',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13 * scale),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            children: [
-              _kv('最新', _fmt(latest)),
-              _kv('平均', _fmt(avg)),
-              _kv('最大', _fmt(max)),
-              _kv('最小', _fmt(min)),
-              _kv('近6小時', trendText),
-              // _kv('完整度', '$pct%'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _kv(String k, String v) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('$k：', style: const TextStyle(color: Colors.black54)),
-        Text(v, style: const TextStyle(fontWeight: FontWeight.w800)),
-      ],
-    );
-  }
-}
-
-/// =======================
 /// Info content (葡萄版)
 /// =======================
 class _FeatureInfo {
@@ -628,7 +580,6 @@ class _FeatureInfo {
 }
 
 _FeatureInfo _featureInfoGrape(String feature, String title) {
-
   const references = '''
 1. 謝慶芳。1988。葡萄園土壤之管理。葡萄生產技術14:71-84。台灣省台中區農業改良場。
 2. 林嘉興 張林仁。1988。設施葡萄溫度管理與生育之探討。葡萄生產技術 14:157-172。
@@ -669,7 +620,7 @@ _FeatureInfo _featureInfoGrape(String feature, String title) {
 寒流後：施葉肥、開根素恢復樹勢
 高溫時：保持土壤濕度、溫室通風、適度疏果、噴霧降溫
 ''',
-reference: references,
+        reference: references,
       );
     case 'Soil Moisture':
       return _FeatureInfo(
@@ -715,7 +666,7 @@ reference: references,
         action: '透過修枝改善通風透光，或在高溫強光時進行遮陰。',
         reference: references,
       );
-   
+
     default:
       return _FeatureInfo(
         title: title,
@@ -783,19 +734,9 @@ _PrimaryLine _pickPrimaryLine({
 class _Stats {
   final double latest;
   final double avg;
-  final double min;
-  final double max;
   final double sd;
-  final double trend6h;
 
-  const _Stats({
-    required this.latest,
-    required this.avg,
-    required this.min,
-    required this.max,
-    required this.sd,
-    required this.trend6h,
-  });
+  const _Stats({required this.latest, required this.avg, required this.sd});
 }
 
 _Stats _calcStats(List<ChartData> points) {
@@ -803,12 +744,8 @@ _Stats _calcStats(List<ChartData> points) {
   final latest = points.last.value;
 
   double sum = 0;
-  double minV = values.first;
-  double maxV = values.first;
   for (final v in values) {
     sum += v;
-    if (v < minV) minV = v;
-    if (v > maxV) maxV = v;
   }
   final avg = sum / values.length;
 
@@ -819,28 +756,7 @@ _Stats _calcStats(List<ChartData> points) {
   }
   final sd = math.sqrt(varSum / math.max(1, values.length));
 
-  final targetTime = points.last.time.subtract(const Duration(hours: 6));
-  ChartData nearest = points.first;
-  for (final p in points) {
-    if ((p.time.difference(targetTime)).abs() < (nearest.time.difference(targetTime)).abs()) {
-      nearest = p;
-    }
-  }
-  final trend6h = latest - nearest.value;
-
-  return _Stats(
-    latest: latest,
-    avg: avg,
-    min: minV,
-    max: maxV,
-    sd: sd,
-    trend6h: trend6h,
-  );
-}
-
-int _expectedHourlyCount(DateTime start, DateTime end) {
-  if (end.isBefore(start)) return 0;
-  return end.difference(start).inHours + 1;
+  return _Stats(latest: latest, avg: avg, sd: sd);
 }
 
 /// =======================
@@ -887,87 +803,155 @@ List<_InsightChip> _buildInsightsGrape({
   }
 
   switch (feature) {
-
     /// 🌡️ 溫度（完全依照你給的葡萄條件）
     case 'Temperature':
       if (stats.latest < 10) {
-        chips.add(_InsightChip('寒害警報（<10°C）', Icons.ac_unit, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip('寒害警報（<10°C）', Icons.ac_unit, const Color(0xFFE3F2FD)),
+        );
       } else if (stats.latest < 15) {
-        chips.add(_InsightChip('低溫注意（10–15°C）', Icons.warning_amber, const Color(0xFFFFF8E1)));
+        chips.add(
+          _InsightChip(
+            '低溫注意（10–15°C）',
+            Icons.warning_amber,
+            const Color(0xFFFFF8E1),
+          ),
+        );
       } else if (stats.latest >= 20 && stats.latest <= 30) {
-        chips.add(_InsightChip('生長適溫（20–30°C）', Icons.check_circle, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '生長適溫（20–30°C）',
+            Icons.check_circle,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       } else if (stats.latest > 30) {
-        chips.add(_InsightChip('高溫警戒（>30°C）', Icons.local_fire_department, const Color(0xFFFFEBEE)));
+        chips.add(
+          _InsightChip(
+            '高溫警戒（>30°C）',
+            Icons.local_fire_department,
+            const Color(0xFFFFEBEE),
+          ),
+        );
       }
 
       // 連續高溫
       final hotHours = consecAbove(30);
       if (hotHours >= 6) {
-        chips.add(_InsightChip('連續高溫 $hotHours 小時（著果不良風險）', Icons.local_fire_department, const Color(0xFFFFCDD2)));
+        chips.add(
+          _InsightChip(
+            '連續高溫 $hotHours 小時（著果不良風險）',
+            Icons.local_fire_department,
+            const Color(0xFFFFCDD2),
+          ),
+        );
       }
 
       // 連續低溫
       final coldHours = consecBelow(12);
       if (coldHours >= 6) {
-        chips.add(_InsightChip('連續低溫 $coldHours 小時（生長停滯）', Icons.ac_unit, const Color(0xFFE1F5FE)));
+        chips.add(
+          _InsightChip(
+            '連續低溫 $coldHours 小時（生長停滯）',
+            Icons.ac_unit,
+            const Color(0xFFE1F5FE),
+          ),
+        );
       }
       break;
 
     /// 💧 濕度（結合你給的條件）
     case 'Humidity':
       if (stats.latest < 40) {
-        chips.add(_InsightChip('濕度過低（<40%）', Icons.air, const Color(0xFFFFF3E0)));
+        chips.add(
+          _InsightChip('濕度過低（<40%）', Icons.air, const Color(0xFFFFF3E0)),
+        );
       } else if (stats.latest >= 40 && stats.latest <= 60) {
-        chips.add(_InsightChip('低濕區（40–60%，著果不良風險）', Icons.air, const Color(0xFFFFF8E1)));
+        chips.add(
+          _InsightChip(
+            '低濕區（40–60%，著果不良風險）',
+            Icons.air,
+            const Color(0xFFFFF8E1),
+          ),
+        );
       } else if (stats.latest > 85) {
-        chips.add(_InsightChip('高濕（病害風險↑）', Icons.water_drop, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip('高濕（病害風險↑）', Icons.water_drop, const Color(0xFFE3F2FD)),
+        );
       }
 
       final lowHumHours = consecBelow(60);
       if (lowHumHours >= 6) {
-        chips.add(_InsightChip('連續低濕 $lowHumHours 小時（授粉不良）', Icons.air, const Color(0xFFFFE0B2)));
+        chips.add(
+          _InsightChip(
+            '連續低濕 $lowHumHours 小時（授粉不良）',
+            Icons.air,
+            const Color(0xFFFFE0B2),
+          ),
+        );
       }
       break;
 
     /// 🌱 土壤濕度
     case 'Soil Moisture':
       if (stats.latest < 20) {
-        chips.add(_InsightChip('土壤過乾（<20%）', Icons.grass, const Color(0xFFFFF3E0)));
+        chips.add(
+          _InsightChip('土壤過乾（<20%）', Icons.grass, const Color(0xFFFFF3E0)),
+        );
       } else if (stats.latest > 40) {
-        chips.add(_InsightChip('土壤過濕（>40%）', Icons.water, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip('土壤過濕（>40%）', Icons.water, const Color(0xFFE8F5E9)),
+        );
       } else {
-        chips.add(_InsightChip('土壤適中（20–40%）', Icons.check_circle, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '土壤適中（20–40%）',
+            Icons.check_circle,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       }
       break;
 
     /// ⚡ EC（你給的是 2700）
     case 'Soil Electrical Conductivity':
       if (stats.latest > 2700) {
-        chips.add(_InsightChip('鹽害風險（>2700 μS/cm）', Icons.science, const Color(0xFFFFCDD2)));
+        chips.add(
+          _InsightChip(
+            '鹽害風險（>2700 μS/cm）',
+            Icons.science,
+            const Color(0xFFFFCDD2),
+          ),
+        );
       } else if (stats.latest > 1500) {
-        chips.add(_InsightChip('EC偏高（注意施肥）', Icons.warning, const Color(0xFFFFF8E1)));
+        chips.add(
+          _InsightChip('EC偏高（注意施肥）', Icons.warning, const Color(0xFFFFF8E1)),
+        );
       }
       break;
 
     /// ⚗️ pH
     case 'Potential of Hydrogen':
-      if (stats.latest < 5.5) {
-        chips.add(_InsightChip('pH過低（<5.5）', Icons.warning, const Color(0xFFFFF8E1)));
-      } else if (stats.latest > 7.5) {
-        chips.add(_InsightChip('pH偏高（有助糖度）', Icons.trending_up, const Color(0xFFE8F5E9)));
-      } else {
-        chips.add(_InsightChip('pH適中（6–8）', Icons.check_circle, const Color(0xFFE8F5E9)));
-      }
       break;
 
     /// 光照
     case 'Luminance':
       if (stats.latest < 1000) {
-        chips.add(_InsightChip('光照不足', Icons.dark_mode, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip('光照不足', Icons.dark_mode, const Color(0xFFE3F2FD)),
+        );
       } else if (stats.latest > 80000) {
-        chips.add(_InsightChip('光照過強（可能日灼）', Icons.wb_sunny, const Color(0xFFFFEBEE)));
+        chips.add(
+          _InsightChip('光照過強（可能日灼）', Icons.wb_sunny, const Color(0xFFFFEBEE)),
+        );
       } else {
-        chips.add(_InsightChip('光照適中', Icons.wb_sunny_outlined, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip(
+            '光照適中',
+            Icons.wb_sunny_outlined,
+            const Color(0xFFE8F5E9),
+          ),
+        );
       }
       break;
 
@@ -983,18 +967,33 @@ List<_InsightChip> _buildInsightsGrape({
       }
 
       if (sum24h > 50) {
-        chips.add(_InsightChip('近24小時降雨 ${sum24h.toStringAsFixed(1)} mm（病害風險↑）',
-            Icons.umbrella, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip(
+            '近24小時降雨 ${sum24h.toStringAsFixed(1)} mm（病害風險↑）',
+            Icons.umbrella,
+            const Color(0xFFE3F2FD),
+          ),
+        );
       } else if (stats.latest > 0) {
-        chips.add(_InsightChip('目前降雨中', Icons.umbrella, const Color(0xFFE3F2FD)));
+        chips.add(
+          _InsightChip('目前降雨中', Icons.umbrella, const Color(0xFFE3F2FD)),
+        );
       }
       break;
 
     default:
       if (stats.latest > stats.avg) {
-        chips.add(_InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)));
+        chips.add(
+          _InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)),
+        );
       } else if (stats.latest < stats.avg) {
-        chips.add(_InsightChip('目前偏低（相對）', Icons.trending_down, const Color(0xFFFFEBEE)));
+        chips.add(
+          _InsightChip(
+            '目前偏低（相對）',
+            Icons.trending_down,
+            const Color(0xFFFFEBEE),
+          ),
+        );
       }
       break;
   }
