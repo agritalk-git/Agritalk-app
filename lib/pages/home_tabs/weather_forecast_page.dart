@@ -12,6 +12,35 @@ class WeatherForecastPage extends StatefulWidget {
 }
 
 class _WeatherForecastPageState extends State<WeatherForecastPage> {
+  static const List<String> _changhuaTownships = [
+    "彰化市",
+    "鹿港鎮",
+    "和美鎮",
+    "線西鄉",
+    "伸港鄉",
+    "福興鄉",
+    "秀水鄉",
+    "花壇鄉",
+    "芬園鄉",
+    "員林市",
+    "溪湖鎮",
+    "田中鎮",
+    "大村鄉",
+    "埔鹽鄉",
+    "埔心鄉",
+    "永靖鄉",
+    "社頭鄉",
+    "二水鄉",
+    "北斗鎮",
+    "二林鎮",
+    "田尾鄉",
+    "埤頭鄉",
+    "芳苑鄉",
+    "大城鄉",
+    "竹塘鄉",
+    "溪州鄉",
+  ];
+
   final apiService = ApiService();
 
   // 跟你 App 其他頁一致（紫色系）
@@ -20,9 +49,9 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
   bool loading = true;
   Map<String, dynamic>? data;
 
-  // 先固定彰化（你要做切換時，再把這兩個接 UI 下拉）
   String county = "彰化縣";
   String township = "彰化市";
+  int _loadRequestId = 0;
 
   @override
   void initState() {
@@ -31,19 +60,21 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
   }
 
   Future<void> _load() async {
+    final requestId = ++_loadRequestId;
+    final selectedTownship = township;
     setState(() => loading = true);
     try {
       final res = await apiService.fetchCwaFd0047019(
         county: county,
-        township: township,
+        township: selectedTownship,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _loadRequestId) return;
       setState(() {
         data = res;
         loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _loadRequestId) return;
       setState(() {
         data = {"error": true, "message": e.toString()};
         loading = false;
@@ -317,6 +348,36 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           children: [
             if (loading) const LinearProgressIndicator(),
            
+            const SizedBox(height: 12),
+
+            DropdownButtonFormField<String>(
+              value: township,
+              decoration: InputDecoration(
+                labelText: "選擇彰化縣鄉鎮市",
+                prefixIcon: Icon(Icons.location_city, color: _primaryColor),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              items: _changhuaTownships
+                  .map(
+                    (town) => DropdownMenuItem<String>(
+                      value: town,
+                      child: Text(town),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (selectedTownship) {
+                if (selectedTownship == null || selectedTownship == township) {
+                  return;
+                }
+                setState(() => township = selectedTownship);
+                _load();
+              },
+            ),
             const SizedBox(height: 12),
 
             if (!loading && !hasData) _infoCard("讀取失敗，請下拉重新整理"),

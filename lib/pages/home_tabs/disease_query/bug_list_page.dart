@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:chcg_iot_app/core/api_service.dart';
-import 'package:chcg_iot_app/pages/home_tabs/disease_query/bug_usage_detail_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/disease_query/bug_usage_row_detail_page.dart';
 
 class BugListPage extends StatefulWidget {
   const BugListPage({
     super.key,
     required this.farmParam,
     required this.bug,
+    required this.cropName,
+    required this.bugName,
   });
 
   /// 例： "101,102,103"
   final String farmParam;
   final String bug;
+  final String cropName;
+  final String bugName;
 
   @override
   State<BugListPage> createState() => _BugListPageState();
@@ -19,10 +23,14 @@ class BugListPage extends StatefulWidget {
 
 class _BugListPageState extends State<BugListPage> {
   final DiseaseApiService _api = DiseaseApiService();
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
 
   bool _loading = false;
   String? _error;
   List<dynamic> _items = [];
+  List<dynamic> _columns = [];
+  String _title = '';
 
   static const Color _primaryColor = Color(0xFF7B4DBB);
 
@@ -32,26 +40,148 @@ class _BugListPageState extends State<BugListPage> {
     _loadBugList();
   }
 
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadBugList() async {
     setState(() {
       _loading = true;
       _error = null;
       _items = [];
+      _columns = [];
+      _title = '';
     });
 
     try {
-      final res = await _api.fetchBugFarmList(farm: widget.farmParam, bug:widget.bug);
-      final items = (res?['items'] ?? []) as List<dynamic>;
+      final farmCodes =
+          widget.farmParam
+              .split(',')
+              .map((farm) => farm.trim())
+              .where((farm) => farm.isNotEmpty)
+              .toList();
+      if (farmCodes.isEmpty) {
+        throw StateError('未提供有效的作物代碼。');
+      }
+
+      var bugCode = widget.bug.trim();
+      final isBugCode = RegExp(r'^[A-Za-z][A-Za-z0-9]*$').hasMatch(bugCode);
+      if (bugCode.isNotEmpty && !isBugCode) {
+        final lookup = await _api.fetchBugs(bug: bugCode);
+        final matches = lookup['items'];
+        if (matches is! List) {
+          throw const FormatException('病蟲查詢回應格式錯誤。');
+        }
+
+        final candidates =
+            matches.whereType<Map>().where((match) {
+              final name = match['instn1']?.toString().trim() ?? '';
+              final id = match['instid']?.toString().trim() ?? '';
+              return id.isNotEmpty && name.isNotEmpty;
+            }).toList();
+        if (candidates.isEmpty) {
+          throw StateError('找不到「$bugCode」對應的病蟲代碼，請調整關鍵字後再試。');
+        }
+
+        final exactMatches =
+            candidates
+                .where((match) => match['instn1'].toString().trim() == bugCode)
+                .toList();
+        final selected =
+            exactMatches.isNotEmpty ? exactMatches.first : candidates.first;
+        bugCode = selected['instid'].toString().trim();
+      }
+
+      final responseRequests = <Future<Map<String, dynamic>?>>[];
+      final responseLabels = <String>[];
+
+      if (bugCode.isNotEmpty) {
+        for (final farm in farmCodes) {
+          responseRequests.add(
+            _api.fetchBugFarmUserange(farm: farm, bug: bugCode),
+          );
+          responseLabels.add('作物代碼 $farm');
+        }
+      } else {
+        final bugLists = await Future.wait(
+          farmCodes.map((farm) => _api.fetchBugFarmList(farm: farm)),
+        );
+
+        for (var index = 0; index < bugLists.length; index++) {
+          final bugList = bugLists[index];
+          if (bugList == null) {
+            throw Exception('查詢作物代碼 ${farmCodes[index]} 的病蟲清單失敗。');
+          }
+
+          final rawBugItems = bugList['items'];
+          if (rawBugItems is! List) {
+            throw const FormatException('病蟲清單回應格式錯誤。');
+          }
+
+          final bugCodes =
+              rawBugItems
+                  .whereType<Map>()
+                  .map((item) => item['bug_code']?.toString().trim() ?? '')
+                  .where((code) => code.isNotEmpty)
+                  .toSet();
+
+          for (final code in bugCodes) {
+            responseRequests.add(
+              _api.fetchBugFarmUserange(farm: farmCodes[index], bug: code),
+            );
+            responseLabels.add('作物代碼 ${farmCodes[index]}、病蟲代碼 $code');
+          }
+        }
+      }
+
+      final responses = await Future.wait(responseRequests);
+      final items = <dynamic>[];
+      final columns = <dynamic>[];
+      final titles = <String>{};
+
+      for (var index = 0; index < responses.length; index++) {
+        final response = responses[index];
+        if (response == null) {
+          throw Exception('查詢${responseLabels[index]}的用藥資料失敗。');
+        }
+
+        final rawItems = response['items'];
+        final rawColumns = response['columns'];
+        if (rawItems is List) {
+          items.addAll(rawItems);
+        }
+        if (columns.isEmpty && rawColumns is List) {
+          columns.addAll(rawColumns);
+        }
+        final title = response['title']?.toString() ?? '';
+        if (title.isNotEmpty) {
+          titles.add(title);
+        }
+      }
+
+      if (columns.isEmpty && items.isNotEmpty && items.first is Map) {
+        final firstRow = items.first as Map;
+        columns.addAll(
+          firstRow.keys.map(
+            (key) => {'key': key.toString(), 'label': key.toString()},
+          ),
+        );
+      }
 
       if (!mounted) return;
 
       setState(() {
         _items = items;
+        _columns = columns;
+        _title = bugCode.isEmpty ? '${widget.cropName} 用藥清單' : titles.join('、');
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '查詢病蟲清單失敗：$e';
+        _error = '查詢用藥資料失敗：$e';
       });
     } finally {
       if (mounted) {
@@ -62,30 +192,24 @@ class _BugListPageState extends State<BugListPage> {
     }
   }
 
-  void _openBugUsageDetail(Map<String, dynamic> item) {
-    final farmCode = item['farm_code']?.toString();
-    final bugCode = item['bug_code']?.toString();
-    final cropName = item['crop_name']?.toString() ?? '';
-    final bugName = item['bug_name']?.toString() ?? '';
-
-    if (farmCode == null || bugCode == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('此筆資料缺少 farm_code 或 bug_code')),
-      );
-      return;
-    }
-
+  void _openRowDetail(Map<String, dynamic> item) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BugUsageDetailPage(
-          farmCode: farmCode,
-          bugCode: bugCode,
-          cropName: cropName,
-          bugName: bugName,
-        ),
+        builder:
+            (_) => BugUsageRowDetailPage(
+              columns: _columns,
+              rowData: item,
+              cropName: widget.cropName,
+              bugName: widget.bugName,
+            ),
       ),
     );
+  }
+
+  Map<String, dynamic> _asRow(dynamic item) {
+    if (item is! Map) return <String, dynamic>{};
+    return item.map((key, value) => MapEntry(key.toString(), value));
   }
 
   @override
@@ -93,8 +217,8 @@ class _BugListPageState extends State<BugListPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F8),
       appBar: AppBar(
-        title: const Text(
-          '病蟲清單',
+        title: Text(
+          _title.isEmpty ? '用藥清單' : _title,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
         ),
         centerTitle: true,
@@ -129,8 +253,10 @@ class _BugListPageState extends State<BugListPage> {
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: _primaryColor,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -147,133 +273,116 @@ class _BugListPageState extends State<BugListPage> {
 
     if (_items.isEmpty) {
       return const Center(
-        child: Text(
-          '查無病蟲清單資料。',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: Text('查無用藥資料。', style: TextStyle(color: Colors.grey)),
       );
     }
 
+    final columns = _columns.whereType<Map>().toList();
     return RefreshIndicator(
-  onRefresh: _loadBugList,
-  child: ListView.builder(
-    padding: const EdgeInsets.all(16),
-    // 原本是 _items.length + 1，改成多一個 footer，所以 +2
-    itemCount: _items.length + 2,
-    itemBuilder: (context, index) {
-      // 0：頂部資訊區塊
-      if (index == 0) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: Row(
+      onRefresh: _loadBugList,
+      child: Scrollbar(
+        controller: _verticalController,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: _verticalController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '共找到 ${_items.length} 筆病蟲資料',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: _primaryColor,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '共找到 ${_items.length} 筆用藥資料',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: _primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      '點擊資料列可查看完整用藥資料。',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Scrollbar(
+                  controller: _horizontalController,
+                  thumbVisibility: true,
+                  notificationPredicate:
+                      (notification) =>
+                          notification.metrics.axis == Axis.horizontal,
+                  child: SingleChildScrollView(
+                    controller: _horizontalController,
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: [
+                        for (final column in columns)
+                          DataColumn(
+                            label: Text(
+                              column['label']?.toString() ??
+                                  column['key']?.toString() ??
+                                  '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                      rows: [
+                        for (var index = 0; index < _items.length; index++)
+                          _buildDataRow(_asRow(_items[index]), columns),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  '點擊某一筆可查看該病蟲的用藥建議。',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+              const Padding(
+                padding: EdgeInsets.only(top: 16, bottom: 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '資料來源：農業部動植物防疫檢疫署',
+                    style: TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      }
-
-      // 最後一筆：資料來源備註 footer
-      if (index == _items.length + 1) {
-        return const Padding(
-          padding: EdgeInsets.only(top: 16.0, bottom: 8.0),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '資料來源：農業部動植物防疫檢疫署',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.black54,
-              ),
-            ),
-          ),
-        );
-      }
-
-      // 其他：病蟲卡片
-      final item = _items[index - 1] as Map<String, dynamic>? ?? {};
-      final String cropName = (item['crop_name'] ?? '').toString();
-      final String bugName = (item['bug_name'] ?? '').toString();
-
-      return Card(
-        elevation: 2,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _openBugUsageDetail(item),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: _primaryColor.withOpacity(0.08),
-                  child: const Icon(
-                    Icons.bug_report,
-                    color: _primaryColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        bugName,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '作物：$cropName',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right,
-                  color: Colors.black38,
-                ),
-              ],
-            ),
-          ),
         ),
-      );
-    },
-  ),
-);
-}
+      ),
+    );
+  }
+
+  DataRow _buildDataRow(Map<String, dynamic> item, List<Map> columns) {
+    return DataRow(
+      onSelectChanged: (_) => _openRowDetail(item),
+      cells: [
+        for (final column in columns)
+          DataCell(
+            Text(
+              (item[column['key']?.toString()] ?? '').toString(),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+    );
+  }
 }

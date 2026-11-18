@@ -328,7 +328,7 @@ class ApiService {
     );
   }
 
-    // =========================================================
+  // =========================================================
   // ActuatorObservationGroups（群組）
   // =========================================================
 
@@ -522,22 +522,29 @@ class ApiService {
     }
   }
 
-
-  Future<List<dynamic>?> fetchGroupCyclic(String token, String groupUUID) async {
+  Future<List<dynamic>?> fetchGroupCyclic(
+    String token,
+    String groupUUID,
+  ) async {
     final url = Uri.parse(
       '$baseUrl/odata/api/v1-Odata/group_cyclic/list?groupUUID=${Uri.encodeComponent(groupUUID)}',
     );
 
-    final res = await http.get(url, headers: {
+    final res = await http.get(
+      url,
+      headers: {
         'Authorization': token,
         'Content-Type': 'application/json',
         'accept': 'application/json',
-      },);
+      },
+    );
 
     if (res.statusCode == 200) {
       final body = jsonDecode(utf8.decode(res.bodyBytes));
       // 後端回：{ "rules": [...] }
-      return (body is Map && body['rules'] is List) ? body['rules'] as List : [];
+      return (body is Map && body['rules'] is List)
+          ? body['rules'] as List
+          : [];
     }
 
     throw Exception(
@@ -1494,55 +1501,56 @@ class ApiService {
   /// 建一個「控制 base」：例如 https://host[:port]/cgi-bin/camctrl/camctrl.cgi
   /// 然後傳指令（move=up/down/left/right/stop）
   Future<bool> cameraMove({
-  required String controlBase,
-  required String direction, // up/down/left/right/stop
-  String? username,
-  String? password,
-}) async {
-  print('[cameraMove] controlBase: $controlBase');
+    required String controlBase,
+    required String direction, // up/down/left/right/stop
+    String? username,
+    String? password,
+  }) async {
+    print('[cameraMove] controlBase: $controlBase');
 
-  // ================================
-  // ✅ 只有 RTSP 才走 PTZ API (PUT XML)
-  // ================================
-  if (controlBase.startsWith('rtsp')) {
-    try {
-      final httpBase = controlBase.replaceFirst('rtsp://', 'http://');
-      
-      // print(httpBase);
+    // ================================
+    // ✅ 只有 RTSP 才走 PTZ API (PUT XML)
+    // ================================
+    if (controlBase.startsWith('rtsp')) {
+      try {
+        final httpBase = controlBase.replaceFirst('rtsp://', 'http://');
 
-      final uri = Uri.parse(httpBase);
-      final port = uri.hasPort ? uri.port : 80;
+        // print(httpBase);
 
-      final url = 'http://${uri.host}:$port/ISAPI/PTZCtrl/channels/1/continuous';
+        final uri = Uri.parse(httpBase);
+        final port = uri.hasPort ? uri.port : 80;
 
-      print('[cameraMove][RTSP->HTTP] URL: $url');
+        final url =
+            'http://${uri.host}:$port/ISAPI/PTZCtrl/channels/1/continuous';
 
-      String pan = '0';
-      String tilt = '0';
+        print('[cameraMove][RTSP->HTTP] URL: $url');
 
-      switch (direction) {
-        case 'up':
-          tilt = '70';
-          break;
-        case 'down':
-          tilt = '-70';
-          break;
-        case 'left':
-          pan = '-70';
-          break;
-        case 'right':
-          pan = '70';
-          break;
-        case 'stop':
-          pan = '0';
-          tilt = '0';
-          break;
-        default:
-          pan = '0';
-          tilt = '0';
-      }
+        String pan = '0';
+        String tilt = '0';
 
-      final xml = '''
+        switch (direction) {
+          case 'up':
+            tilt = '70';
+            break;
+          case 'down':
+            tilt = '-70';
+            break;
+          case 'left':
+            pan = '-70';
+            break;
+          case 'right':
+            pan = '70';
+            break;
+          case 'stop':
+            pan = '0';
+            tilt = '0';
+            break;
+          default:
+            pan = '0';
+            tilt = '0';
+        }
+
+        final xml = '''
 <PTZData>
     <pan>$pan</pan>
     <tilt>$tilt</tilt>
@@ -1550,139 +1558,138 @@ class ApiService {
 </PTZData>
 ''';
 
-      return await cameraControlPutByUrl(
-        url,
-        body: xml,
-        username: username,
-        password: password,
-      );
-    } catch (e) {
-      print('[cameraMove][RTSP] Error: $e');
-      return false;
+        return await cameraControlPutByUrl(
+          url,
+          body: xml,
+          username: username,
+          password: password,
+        );
+      } catch (e) {
+        print('[cameraMove][RTSP] Error: $e');
+        return false;
+      }
     }
-  }
 
-  // ================================
-  // ✅ 非 RTSP 維持原本 GET 控制
-  // ================================
-  final url = '$controlBase?move=$direction&channel=0&stream=0';
-  print('[cameraMove] URL: $url');
+    // ================================
+    // ✅ 非 RTSP 維持原本 GET 控制
+    // ================================
+    final url = '$controlBase?move=$direction&channel=0&stream=0';
+    print('[cameraMove] URL: $url');
 
-  final success = await cameraControlGetByUrl(
-    url,
-    username: username,
-    password: password,
-  );
-
-  if (!success && controlBase.contains('camctrl.cgi')) {
-    final fallbackBase = controlBase.replaceFirst(
-      'camctrl.cgi',
-      'eCamCtrl.cgi',
-    );
-    final fallbackUrl = '$fallbackBase?move=$direction&channel=0&stream=0';
-    print('[cameraMove] Retry URL: $fallbackUrl');
-
-    return cameraControlGetByUrl(
-      fallbackUrl,
+    final success = await cameraControlGetByUrl(
+      url,
       username: username,
       password: password,
     );
-  }
 
-  return success;
-}
+    if (!success && controlBase.contains('camctrl.cgi')) {
+      final fallbackBase = controlBase.replaceFirst(
+        'camctrl.cgi',
+        'eCamCtrl.cgi',
+      );
+      final fallbackUrl = '$fallbackBase?move=$direction&channel=0&stream=0';
+      print('[cameraMove] Retry URL: $fallbackUrl');
 
-
-
-Future<bool> cameraControlPutByUrl(
-  String url, {
-  required String body,
-  String? username,
-  String? password,
-}) async {
-  HttpClient? client;
-
-  try {
-    final uri = Uri.parse(url);
-    client = HttpClient();
-
-    client.authenticate = (Uri authUri, String scheme, String? realm) async {
-      print('[AUTH] scheme=$scheme realm=$realm uri=$authUri');
-
-      if (username == null || password == null) {
-        return false;
-      }
-
-      final s = scheme.toLowerCase();
-
-      if (s == 'digest') {
-        client!.addCredentials(
-          authUri,
-          realm ?? '',
-          HttpClientDigestCredentials(username, password),
-        );
-        return true;
-      }
-
-      if (s == 'basic') {
-        client!.addCredentials(
-          authUri,
-          realm ?? '',
-          HttpClientBasicCredentials(username, password),
-        );
-        return true;
-      }
-
-      return false;
-    };
-
-    // =========================
-    // 1) 先做一次暖機，拿 Digest challenge
-    // =========================
-    try {
-      final warmupReq = await client.getUrl(uri);
-      warmupReq.headers.set(HttpHeaders.acceptHeader, '*/*');
-      warmupReq.headers.set(HttpHeaders.connectionHeader, 'close');
-
-      final warmupResp = await warmupReq.close();
-      final warmupBody = await utf8.decodeStream(warmupResp);
-
-      print('[WARMUP] status: ${warmupResp.statusCode}');
-      print('[WARMUP] body: $warmupBody');
-    } catch (e) {
-      print('[WARMUP] error: $e');
+      return cameraControlGetByUrl(
+        fallbackUrl,
+        username: username,
+        password: password,
+      );
     }
 
-    // =========================
-    // 2) 再送真正的 PUT
-    // =========================
-    final request = await client.putUrl(uri);
-
-    final bytes = utf8.encode(body);
-
-    request.headers.set(HttpHeaders.acceptHeader, '*/*');
-    request.headers.set(HttpHeaders.connectionHeader, 'close');
-    request.contentLength = bytes.length;
-    request.add(bytes);
-
-    // print('[PUT] request body >>>');
-    // print(body);
-    // print('<<< [PUT] request body');
-
-    final response = await request.close();
-    final responseBody = await utf8.decodeStream(response);
-
-    // print('[PUT] status: ${response.statusCode}');
-    // print('[PUT] body: $responseBody');
-
-    return response.statusCode >= 200 && response.statusCode < 300;
-  } catch (e) {
-    print('[PUT] error: $e');
-    return false;
-  } finally {
-    client?.close(force: true);
+    return success;
   }
-}
+
+  Future<bool> cameraControlPutByUrl(
+    String url, {
+    required String body,
+    String? username,
+    String? password,
+  }) async {
+    HttpClient? client;
+
+    try {
+      final uri = Uri.parse(url);
+      client = HttpClient();
+
+      client.authenticate = (Uri authUri, String scheme, String? realm) async {
+        print('[AUTH] scheme=$scheme realm=$realm uri=$authUri');
+
+        if (username == null || password == null) {
+          return false;
+        }
+
+        final s = scheme.toLowerCase();
+
+        if (s == 'digest') {
+          client!.addCredentials(
+            authUri,
+            realm ?? '',
+            HttpClientDigestCredentials(username, password),
+          );
+          return true;
+        }
+
+        if (s == 'basic') {
+          client!.addCredentials(
+            authUri,
+            realm ?? '',
+            HttpClientBasicCredentials(username, password),
+          );
+          return true;
+        }
+
+        return false;
+      };
+
+      // =========================
+      // 1) 先做一次暖機，拿 Digest challenge
+      // =========================
+      try {
+        final warmupReq = await client.getUrl(uri);
+        warmupReq.headers.set(HttpHeaders.acceptHeader, '*/*');
+        warmupReq.headers.set(HttpHeaders.connectionHeader, 'close');
+
+        final warmupResp = await warmupReq.close();
+        final warmupBody = await utf8.decodeStream(warmupResp);
+
+        print('[WARMUP] status: ${warmupResp.statusCode}');
+        print('[WARMUP] body: $warmupBody');
+      } catch (e) {
+        print('[WARMUP] error: $e');
+      }
+
+      // =========================
+      // 2) 再送真正的 PUT
+      // =========================
+      final request = await client.putUrl(uri);
+
+      final bytes = utf8.encode(body);
+
+      request.headers.set(HttpHeaders.acceptHeader, '*/*');
+      request.headers.set(HttpHeaders.connectionHeader, 'close');
+      request.contentLength = bytes.length;
+      request.add(bytes);
+
+      // print('[PUT] request body >>>');
+      // print(body);
+      // print('<<< [PUT] request body');
+
+      final response = await request.close();
+      final responseBody = await utf8.decodeStream(response);
+
+      // print('[PUT] status: ${response.statusCode}');
+      // print('[PUT] body: $responseBody');
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      print('[PUT] error: $e');
+      return false;
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
   /// 變焦（zoom=tele / zoom=wide）
   Future<bool> cameraZoom({
     required String controlBase,
@@ -1967,20 +1974,16 @@ Future<bool> cameraControlPutByUrl(
 }
 
 class DiseaseApiService {
-  /// .env 裡請加一個，例如：
-  /// DISEASE_API_URL=http://192.168.0.10:5000
   final String? diseaseURL = dotenv.env['DISEASE_API_URL'];
 
-  DiseaseApiService() {
-    if (diseaseURL == null || diseaseURL!.isEmpty) {
-      throw Exception(
-        'DISEASE_API_URL 尚未設定，請在 .env 中設定，例如 DISEASE_API_URL=http://127.0.0.1:5000',
-      );
-    }
-  }
+  DiseaseApiService();
 
   Uri _buildUri(String path, [Map<String, String>? params]) {
-    return Uri.parse('$diseaseURL$path').replace(queryParameters: params);
+    final backendUrl = diseaseURL;
+    if (backendUrl == null || backendUrl.isEmpty) {
+      throw StateError('DISEASE_API_URL 尚未設定；疾病查詢 API 無法使用。');
+    }
+    return Uri.parse('$backendUrl$path').replace(queryParameters: params);
   }
 
   // ====================== 既有 API ======================
@@ -1988,7 +1991,7 @@ class DiseaseApiService {
   /// 封裝 /api/farms
   /// 對應 Flask：
   /// GET /api/farms?farm=火龍果
-  Future<Map<String, dynamic>?> fetchFarms({String farm = '火龍果'}) async {
+  Future<Map<String, dynamic>> fetchFarms({String farm = '火龍果'}) async {
     final uri = _buildUri('/api/farms', {'farm': farm});
 
     final res = await http.get(
@@ -1999,12 +2002,11 @@ class DiseaseApiService {
     if (res.statusCode == 200) {
       return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     } else {
-      print('fetchFarms 失敗: ${res.statusCode} ${res.body}');
-      return null;
+      throw Exception('fetchFarms failed: ${res.statusCode} ${res.body}');
     }
   }
 
-  Future<Map<String, dynamic>?> fetchBugs({String bug = '炭疽病'}) async {
+  Future<Map<String, dynamic>> fetchBugs({String bug = '炭疽病'}) async {
     final uri = _buildUri('/api/bugs', {'bug': bug});
 
     final res = await http.get(
@@ -2015,8 +2017,7 @@ class DiseaseApiService {
     if (res.statusCode == 200) {
       return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     } else {
-      print('fetchBugs 失敗: ${res.statusCode} ${res.body}');
-      return null;
+      throw Exception('fetchBugs failed: ${res.statusCode} ${res.body}');
     }
   }
 
@@ -2047,6 +2048,40 @@ class DiseaseApiService {
       print('fetchBugFarmList 失敗: ${res.statusCode} ${res.body}');
       return null;
     }
+  }
+
+  /// Temporary query path for the updated backend endpoint.
+  /// GET /api/bug-med-list?farm=...&bug=...&flag=...&userange=...
+  Future<Map<String, dynamic>> fetchBugMedList({
+    required String farm,
+    String flag = '',
+    String bug = '',
+    String userange = '',
+  }) async {
+    final uri = _buildUri('/api/bug-med-list', {
+      'farm': farm,
+      'flag': flag,
+      'bug': bug,
+      'userange': userange,
+    });
+
+    final res = await http.get(
+      uri,
+      headers: const {'accept': 'application/json'},
+    );
+
+    final body = utf8.decode(res.bodyBytes);
+    if (res.statusCode != 200) {
+      throw Exception('fetchBugMedList failed: ${res.statusCode} $body');
+    }
+
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException(
+        'Unexpected /api/bug-med-list response format.',
+      );
+    }
+    return decoded;
   }
 
   /// 封裝 /api/bug-farm-userange
@@ -2081,13 +2116,13 @@ class DiseaseApiService {
   /// 封裝 /api/azai/search
   /// 對應 Flask：
   /// POST /api/azai/search
-  /// body: { "term": "火龍果", "ty": "y,y,y,y" }
+  /// body: { "term": "火龍果", "ty": "y,y,y,y,y,y" }
   ///
   /// 回傳格式：
   /// { "data": [ { "id": ..., "CName": ..., "pic": "完整圖片 URL", ... }, ... ] }
   Future<Map<String, dynamic>?> searchAzaiBugs({
     required String term,
-    String ty = 'y,y,y,y',
+    String ty = 'y,y,y,y,y,y',
   }) async {
     final uri = _buildUri('/api/azai/search');
 
@@ -2188,7 +2223,9 @@ class DiseaseApiService {
 
 class DiseaseAzaiApiService {
   final String _baseUrl =
-      dotenv.env['DISEASE_API_BASE_URL'] ?? 'http://61.216.142.83:10000';
+      dotenv.env['DISEASE_API_BASE_URL'] ??
+      dotenv.env['DISEASE_API_URL'] ??
+      'http://61.216.142.83:10000';
 
   // ✅ 直接初始化，不需要 late、不需要建構子
   late final Dio _dio = Dio(
@@ -2207,7 +2244,7 @@ class DiseaseAzaiApiService {
         requestBody: true,
         responseBody: true,
         requestHeader: true,
-        responseHeader: false,
+        responseHeader: true,
       ),
     );
 
@@ -2216,12 +2253,18 @@ class DiseaseAzaiApiService {
   // -------------------------------
   Future<Map<String, dynamic>?> searchAzaiBugs({
     required String term,
-    String ty = 'y,y,y,y',
+    String ty = 'y,y,y,y,y,y',
   }) async {
     try {
       final res = await _dio.post(
         '/api/azai/search',
-        data: {'term': term, 'ty': ty},
+        data: {'term': term, 'ty': ty, 'summary': true},
+        onReceiveProgress: (received, total) {
+          print(
+            '[DiseaseApiService] search response bytes: '
+            '$received${total > 0 ? ' / $total' : ''}',
+          );
+        },
       );
 
       if (res.data is Map<String, dynamic>) {

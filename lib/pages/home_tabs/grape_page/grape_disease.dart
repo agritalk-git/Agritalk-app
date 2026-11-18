@@ -203,9 +203,15 @@ class _GrapeDiseasePageState extends State<GrapeDiseasePage> {
 
   Future<void> _onRefresh() async => _fetchAll();
 
+  String getRiskLabel(double score) {
+    if (score >= 60) return "高";
+    if (score >= 30) return "中";
+    return "低";
+  }
+
   Color getRiskColor(double score) {
-    if (score >= 75) return Colors.red;
-    if (score >= 40) return Colors.orange;
+    if (score >= 60) return Colors.red;
+    if (score >= 30) return Colors.yellow;
     return Colors.green;
   }
 
@@ -219,30 +225,11 @@ class _GrapeDiseasePageState extends State<GrapeDiseasePage> {
     required String labelB,
   }) {
 
-    String scoreNameA;
-    String scoreNameB;
-
-
     // 分別抓兩邊分數
     final double scoreA = (currentA?['score'] ?? 0).toDouble();
     final double scoreB = (currentB?['score'] ?? 0).toDouble();
-
-
-    scoreNameA = "低";
-    if (scoreA > 60){
-      scoreNameA = "高";
-    }
-    if (scoreA > 30){
-      scoreNameA = "中";
-    }
-
-    scoreNameB = "低";
-    if (scoreB > 60){
-      scoreNameB = "高";
-    }
-    if (scoreB > 30){
-      scoreNameB = "中";
-    }
+    final String scoreNameA = getRiskLabel(scoreA);
+    final String scoreNameB = getRiskLabel(scoreB);
 
 
     return Card(

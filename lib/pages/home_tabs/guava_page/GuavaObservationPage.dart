@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:chcg_iot_app/core/api_service.dart';
 import 'package:intl/intl.dart';
@@ -41,15 +39,6 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
     'Carbon Dioxide': '二氧化碳(ppm)',
     'Wind Direction': '風向(°)',
     'Wind Speed': '風速(m/s)',
-  };
-
-  /// ✅ 番石榴各指標標籤
-  final Map<String, List<String>> featureLabelMap = const {
-    'Temperature': ['生育適溫：15–32℃', '著果適溫：23–28℃', '警戒：<15℃寒害、>37℃熱障礙'],
-    'Precipitation': ['警戒值：日雨量 > 200 mm'],
-    'Soil Moisture': ['正常值：20–40%'],
-    'Potential of Hydrogen': ['正常值：pH 5.5–7.5'],
-    'Soil Electrical Conductivity': ['警戒值：>1000（鹽害風險）'],
   };
 
   /// ✅ 加入降雨量
@@ -294,7 +283,6 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
                         return FeatureChart(
                           feature: feature,
                           title: featureNameMap[feature] ?? feature,
-                          labels: featureLabelMap[feature] ?? const [],
                           groupSeries: seriesMap,
                           myData: myData,
                           rangeStart: startTime,
@@ -312,7 +300,6 @@ class _GuavaObservationPageState extends State<GuavaObservationPage> {
 class FeatureChart extends StatefulWidget {
   final String feature;
   final String title;
-  final List<String> labels;
   final Map<String, List<ChartData>> groupSeries;
   final List<ChartData> myData;
   final DateTime rangeStart;
@@ -322,7 +309,6 @@ class FeatureChart extends StatefulWidget {
     super.key,
     required this.feature,
     required this.title,
-    required this.labels,
     required this.groupSeries,
     required this.myData,
     required this.rangeStart,
@@ -379,23 +365,6 @@ class _FeatureChartState extends State<FeatureChart>
     final hasAnyData =
         seriesList.whereType<LineSeries<ChartData, DateTime>>().isNotEmpty;
 
-    final _PrimaryLine primary = _pickPrimaryLine(
-      myData: widget.myData,
-      groupSeries: widget.groupSeries,
-    );
-
-    final _Stats? stats =
-        primary.points.isEmpty ? null : _calcStats(primary.points);
-
-    final List<_InsightChip> chips =
-        stats == null
-            ? const []
-            : _buildInsights(
-              feature: widget.feature,
-              stats: stats,
-              points: primary.points,
-            );
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -431,55 +400,7 @@ class _FeatureChartState extends State<FeatureChart>
               ),
               const SizedBox(height: 6),
 
-              if (widget.labels.isNotEmpty) ...[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      widget.labels.map((label) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3E8FF),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFD6BCFA)),
-                          ),
-                          child: Text(
-                            label,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF6B46C1),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                ),
-                const SizedBox(height: 10),
-              ],
-
-              if (stats != null && chips.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      chips.map((c) {
-                        return Chip(
-                          avatar: Icon(c.icon, size: 18),
-                          label: Text(c.text),
-                          backgroundColor: c.bg,
-                          labelStyle: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        );
-                      }).toList(),
-                ),
-              ],
-
+            
               const SizedBox(height: 12),
 
               if (!hasAnyData)
@@ -708,195 +629,4 @@ class _InfoSection extends StatelessWidget {
       ],
     );
   }
-}
-
-class _PrimaryLine {
-  final String label;
-  final List<ChartData> points;
-  const _PrimaryLine(this.label, this.points);
-}
-
-_PrimaryLine _pickPrimaryLine({
-  required List<ChartData> myData,
-  required Map<String, List<ChartData>> groupSeries,
-}) {
-  if (myData.isNotEmpty) return _PrimaryLine('我的數據', myData);
-
-  for (final e in groupSeries.entries) {
-    if (e.value.isNotEmpty) return _PrimaryLine(e.key, e.value);
-  }
-  return const _PrimaryLine('無資料', []);
-}
-
-class _Stats {
-  final double latest;
-  final double avg;
-  final double sd;
-
-  const _Stats({required this.latest, required this.avg, required this.sd});
-}
-
-_Stats _calcStats(List<ChartData> points) {
-  final values = points.map((e) => e.value).toList();
-  final latest = points.last.value;
-
-  double sum = 0;
-  for (final v in values) {
-    sum += v;
-  }
-  final avg = sum / values.length;
-
-  double varSum = 0;
-  for (final v in values) {
-    final d = v - avg;
-    varSum += d * d;
-  }
-  final sd = math.sqrt(varSum / math.max(1, values.length));
-
-  return _Stats(latest: latest, avg: avg, sd: sd);
-}
-
-class _InsightChip {
-  final String text;
-  final IconData icon;
-  final Color bg;
-  const _InsightChip(this.text, this.icon, this.bg);
-}
-
-List<_InsightChip> _buildInsights({
-  required String feature,
-  required _Stats stats,
-  required List<ChartData> points,
-}) {
-  final chips = <_InsightChip>[];
-
-  final double hi = (stats.avg + stats.sd).toDouble();
-  final double lo = (stats.avg - stats.sd).toDouble();
-
-  switch (feature) {
-    case 'Temperature':
-      if (stats.latest < 15) {
-        chips.add(
-          _InsightChip(
-            '低溫警戒（<15℃，注意寒害）',
-            Icons.ac_unit_outlined,
-            const Color(0xFFE8EAF6),
-          ),
-        );
-      } else if (stats.latest > 37) {
-        chips.add(
-          _InsightChip(
-            '高溫警戒（>37℃，注意熱障礙）',
-            Icons.local_fire_department_outlined,
-            const Color(0xFFFFEBEE),
-          ),
-        );
-      } else if (stats.latest >= 23 && stats.latest <= 28) {
-        chips.add(
-          _InsightChip(
-            '著果適溫區間（23–28℃）',
-            Icons.check_circle_outline,
-            const Color(0xFFE8F5E9),
-          ),
-        );
-      } else if (stats.latest >= 15 && stats.latest <= 32) {
-        chips.add(
-          _InsightChip(
-            '生育適溫區間（15–32℃）',
-            Icons.eco_outlined,
-            const Color(0xFFE8F5E9),
-          ),
-        );
-      }
-      break;
-
-    case 'Precipitation':
-      double sum24h = 0;
-      final now = points.isNotEmpty ? points.last.time : DateTime.now();
-      for (final p in points) {
-        if (p.time.isAfter(now.subtract(const Duration(hours: 24)))) {
-          sum24h += p.value;
-        }
-      }
-
-      if (sum24h > 200) {
-        chips.add(
-          _InsightChip(
-            '日雨量警戒（近24小時 > 200 mm）',
-            Icons.umbrella_outlined,
-            const Color(0xFFE3F2FD),
-          ),
-        );
-      } else if (stats.latest >= 1.0) {
-        chips.add(
-          _InsightChip(
-            '目前有降雨',
-            Icons.umbrella_outlined,
-            const Color(0xFFE3F2FD),
-          ),
-        );
-      }
-      break;
-
-    case 'Soil Moisture':
-      if (stats.latest < 20) {
-        chips.add(
-          _InsightChip(
-            '土壤偏乾（<20%）',
-            Icons.grass_outlined,
-            const Color(0xFFFFF3E0),
-          ),
-        );
-      } else if (stats.latest > 40) {
-        chips.add(
-          _InsightChip(
-            '土壤偏濕（>40%）',
-            Icons.waves_outlined,
-            const Color(0xFFE8F5E9),
-          ),
-        );
-      } else {
-        chips.add(
-          _InsightChip(
-            '土壤濕度正常（20–40%）',
-            Icons.check_circle_outline,
-            const Color(0xFFE8F5E9),
-          ),
-        );
-      }
-      break;
-
-    case 'Potential of Hydrogen':
-      break;
-
-    case 'Soil Electrical Conductivity':
-      if (stats.latest > 1000) {
-        chips.add(
-          _InsightChip(
-            'EC 過高（>1000，鹽害風險）',
-            Icons.science_outlined,
-            const Color(0xFFFFF8E1),
-          ),
-        );
-      }
-      break;
-
-    default:
-      if (stats.latest >= hi) {
-        chips.add(
-          _InsightChip('目前偏高（相對）', Icons.trending_up, const Color(0xFFE8F5E9)),
-        );
-      } else if (stats.latest <= lo) {
-        chips.add(
-          _InsightChip(
-            '目前偏低（相對）',
-            Icons.trending_down,
-            const Color(0xFFFFEBEE),
-          ),
-        );
-      }
-      break;
-  }
-
-  return chips;
 }

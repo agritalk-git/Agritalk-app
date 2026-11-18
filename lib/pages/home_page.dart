@@ -4,7 +4,7 @@ import 'home_tabs/home_tab.dart';
 import 'home_tabs/war_room_tab.dart';
 import 'home_tabs/advanced.dart';
 import 'home_tabs/profile_tab.dart';
-import 'home_tabs/about.dart';
+// import 'home_tabs/about.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
@@ -18,8 +18,12 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
   final List<Widget> _tabs = [
-    HomeTab(), 
-    WarRoomTab(),AdvancedTab(), ProfileTab(), AboutTab()];
+    HomeTab(),
+    WarRoomTab(),
+    AdvancedTab(),
+    ProfileTab(),
+    // AboutTab(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -31,6 +35,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
+        if (Navigator.of(context).canPop()) {
+          return true;
+        }
+
         final shouldLogout = await showDialog<bool>(
           context: context,
           builder:
@@ -89,11 +97,11 @@ class _HomePageState extends State<HomePage> {
               selectedIcon: Icon(Icons.person),
               label: '我的',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.public),
-              selectedIcon: Icon(Icons.public),
-              label: '關於我們',
-            ),
+            // NavigationDestination(
+            //   icon: Icon(Icons.public),
+            //   selectedIcon: Icon(Icons.public),
+            //   label: '關於我們',
+            // ),
           ],
         ),
       ),

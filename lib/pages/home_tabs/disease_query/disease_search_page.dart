@@ -27,51 +27,27 @@ class _DiseaseSearchPageState extends State<DiseaseSearchPage> {
 
   Future<void> _doSearch() async {
     final term = _searchController.text.trim();
-    if (term.isEmpty) return;
+    if (term.isEmpty || _loading) return;
 
     setState(() => _loading = true);
 
-    int maxRetry = 10;
-    int attempt = 0;
-    dynamic data;
+    try {
+      final res = await _api.searchAzaiBugs(term: term);
+      if (!mounted) return;
 
-    while (attempt < maxRetry) {
-      attempt++;
-      try {
-        final res = await _api.searchAzaiBugs(term: term);
-        data = res?['data'];
-
-        // 成功就跳出 retry 迴圈
-        break;
-      } catch (e) {
-        if (attempt >= maxRetry) {
-          // 已經重試到第 10 次 → 還是失敗 → 顯示錯誤
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('搜尋失敗（已重試 $attempt 次）：$e')),
-            );
-          }
-          data = null;
-          break;
-        }
-
-        // 等待 300ms 再試下一次（避免狂轟 API）
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-    }
-
-    if (!mounted) return;
-
-    // 更新 UI
-    if (data is List) {
+      final data = res?['data'];
       setState(() {
-        _results = data.whereType<Map<String, dynamic>>().toList();
+        _results =
+            data is List ? data.whereType<Map<String, dynamic>>().toList() : [];
+        _loading = false;
       });
-    } else {
-      setState(() => _results = []);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('搜尋失敗：$e')));
     }
-
-    setState(() => _loading = false);
   }
 
   /// 單一病害卡片樣式（左圖右文）

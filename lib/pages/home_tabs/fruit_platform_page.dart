@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:chcg_iot_app/pages/home_tabs/fruit_observation_page.dart';
+import 'package:chcg_iot_app/pages/home_tabs/fruit_observation_page(heavy).dart'
+    as heavy_observation;
+import 'package:chcg_iot_app/pages/home_tabs/fruit_observation_page(light).dart'
+    as light_observation;
+import 'package:chcg_iot_app/pages/home_tabs/fruit_disease_page.dart';
 
 class FruitPlatformPage extends StatelessWidget {
   final String fruitName;
@@ -64,10 +68,19 @@ class FruitPlatformPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => FruitObservationPage(
-                                fruitName: fruitName,
-                                groupUUID: groupUUID!,
-                              ),
+                              builder: (_) {
+                                const heavyFruits = {'白柚', '洋香瓜', '芒果'};
+                                if (heavyFruits.contains(fruitName)) {
+                                  return heavy_observation.FruitObservationPage(
+                                    fruitName: fruitName,
+                                    groupUUID: groupUUID!,
+                                  );
+                                }
+                                return light_observation.FruitObservationPage(
+                                  fruitName: fruitName,
+                                  groupUUID: groupUUID!,
+                                );
+                              },
                             ),
                           );
                         } else {
@@ -82,7 +95,117 @@ class FruitPlatformPage extends StatelessWidget {
                       icon: Icons.bug_report,
                       iconColor: Colors.deepOrange,
                       title: '病蟲害預測',
-                      onTap: () => _openPlaceholder(context, title: '病蟲害預測'),
+                      onTap: () {
+                        final currentGroupUUID = groupUUID;
+                        if (fruitName == '白柚' && currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '白柚',
+                            apiFruitName: '白柚',
+                            diseaseNames: ['潰瘍病', '柑橘木虱'],
+                            groupLabel: '彰化縣二水鄉白柚',
+                          );
+                        } else if (fruitName == '小果番茄' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '小番茄',
+                            apiFruitName: '番茄',
+                            diseaseNames: ['銀葉粉虱', '白粉病', '灰黴病'],
+                            apiFruitNameByDisease: {'銀葉粉虱': '小番茄'},
+                            groupLabel: '彰化縣秀水鄉小番茄',
+                          );
+                        } else if (fruitName == '洋香瓜' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '洋香瓜',
+                            apiFruitName: '哈密瓜',
+                            diseaseNames: [
+                              '瓜實蠅',
+                              '白粉病',
+                              '銀葉粉虱',
+                              '炭疽病',
+                              '露菌病',
+                              '灰黴病',
+                            ],
+                            groupLabel: '彰化縣永靖鄉洋香瓜',
+                          );
+                        } else if (fruitName == '芒果' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '芒果',
+                            apiFruitName: '芒果',
+                            diseaseNames: ['東方果實蠅', '炭疽病'],
+                            groupLabel: '彰化縣埔心鄉芒果',
+                          );
+                        } else if (fruitName == '小黃瓜' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '小黃瓜',
+                            apiFruitName: '小黃瓜',
+                            diseaseNames: ['露菌病'],
+                            groupLabel: '彰化縣埤頭鄉小黃瓜',
+                          );
+                        } else if (fruitName == '紅龍果' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '紅龍果',
+                            apiFruitName: '火龍果',
+                            diseaseNames: ['莖潰瘍病'],
+                            groupLabel: '彰化縣二林鎮紅龍果',
+                          );
+                        } else if (fruitName == '青蔥') {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID ?? '',
+                            cropName: '青蔥',
+                            apiFruitName: '青蔥',
+                            diseaseNames: ['蔥薊馬', '紫斑病'],
+                            apiFruitNameByDisease: {'蔥薊馬': '蔥'},
+                            groupLabel: '彰化縣埔鹽鄉青蔥',
+                          );
+                        } else if (fruitName == '豌豆' &&
+                            currentGroupUUID != null) {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID,
+                            cropName: '豌豆',
+                            apiFruitName: '豌豆',
+                            diseaseNames: ['斜紋夜蛾', '白粉病'],
+                            groupLabel: '彰化縣溪湖鎮豌豆',
+                          );
+                        } else if (fruitName == '花卉') {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID ?? '',
+                            cropName: '菊花',
+                            apiFruitName: '菊花',
+                            diseaseNames: ['花薊馬', '灰黴病'],
+                            groupLabel: '彰化縣田尾鄉菊花',
+                          );
+                        } else if (fruitName == '稻米') {
+                          _openDiseasePrediction(
+                            context,
+                            groupUUID: currentGroupUUID ?? '',
+                            cropName: '稻米',
+                            apiFruitName: '水稻',
+                            diseaseNames: ['褐飛蝨', '稻熱病'],
+                            groupLabel: '彰化縣竹塘鄉稻米',
+                          );
+                        } else {
+                          _openPlaceholder(context, title: '病蟲害預測');
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -138,6 +261,31 @@ class FruitPlatformPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openDiseasePrediction(
+    BuildContext context, {
+    required String groupUUID,
+    required String cropName,
+    required String apiFruitName,
+    Map<String, String> apiFruitNameByDisease = const {},
+    required List<String> diseaseNames,
+    required String groupLabel,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => FruitDiseasePage(
+              groupUUID: groupUUID,
+              cropName: cropName,
+              apiFruitName: apiFruitName,
+              apiFruitNameByDisease: apiFruitNameByDisease,
+              diseaseNames: diseaseNames,
+              groupLabel: groupLabel,
+            ),
       ),
     );
   }

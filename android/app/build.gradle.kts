@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         applicationId = "com.agritalk.chcg_iot_app"
-        minSdk = 23
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -51,7 +51,7 @@ android {
 
             if (alias != null) keyAlias = alias
             if (keyPass != null) keyPassword = keyPass
-            if (store != null) storeFile = file(store)
+            if (store != null) storeFile = rootProject.file("android/$store")
             if (storePass != null) storePassword = storePass
         }
     }

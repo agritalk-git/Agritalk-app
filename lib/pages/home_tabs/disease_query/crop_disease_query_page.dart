@@ -42,9 +42,9 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
   Future<void> _searchFarms() async {
     final keyword = _cropController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請輸入作物名稱關鍵字')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請輸入作物名稱關鍵字')));
       return;
     }
 
@@ -59,13 +59,13 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
       if (!mounted) return;
 
       setState(() {
-        _farmList = res?['items'] ?? [];
+        _farmList = res['items'] ?? [];
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('查詢作物代碼失敗：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('查詢作物代碼失敗：$e')));
     } finally {
       if (mounted) setState(() => _loadingFarms = false);
     }
@@ -74,7 +74,8 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
   // 2) 查詢病蟲（彈出單選選單）
   Future<void> _searchBugsAndPickOne() async {
     if (!_enableBugSearch) return; // ✅ 沒開啟就不做事
-    final keyword = _bugController.text.trim().isEmpty ? '' : _bugController.text.trim();
+    final keyword =
+        _bugController.text.trim().isEmpty ? '' : _bugController.text.trim();
 
     setState(() {
       _loadingBugs = true;
@@ -88,11 +89,11 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
       final res = await _diseaseApi.fetchBugs(bug: keyword);
       if (!mounted) return;
 
-      final items = (res?['items'] ?? []) as List<dynamic>;
+      final items = (res['items'] ?? []) as List<dynamic>;
       if (items.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('查無病蟲資料，請換個關鍵字')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('查無病蟲資料，請換個關鍵字')));
         setState(() => _loadingBugs = false);
         return;
       }
@@ -119,19 +120,19 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('查詢病蟲失敗：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('查詢病蟲失敗：$e')));
     } finally {
       if (mounted) setState(() => _loadingBugs = false);
     }
   }
 
-  Future<Map<String, dynamic>?> _showBugSinglePickDialog(List<dynamic> items) async {
+  Future<Map<String, dynamic>?> _showBugSinglePickDialog(
+    List<dynamic> items,
+  ) async {
     // 把資料轉成 Map<String,dynamic>
-    final list = items
-        .map((e) => (e as Map).cast<String, dynamic>())
-        .toList();
+    final list = items.map((e) => (e as Map).cast<String, dynamic>()).toList();
 
     // 預設選中：如果已經選過，就沿用；否則 null
     String? selectedInstId = _selectedBugInstId;
@@ -201,36 +202,51 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
 
   // 3) 查詢病蟲清單（進下一頁）
   Future<void> _searchBugList() async {
-  if (_selectedFarmIds.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('請先選擇至少一個作物代碼')),
-    );
-    return;
-  }
-
-  final farmParam = _selectedFarmIds.join(',');
-
-  // ✅ Switch 關掉：bug 一律帶空字串 ''
-  String bug = '';
-  if (_enableBugSearch) {
-    // ✅ Switch 開啟：優先用「選到的 instid」，沒選就用輸入框文字（允許空字串）
-    if (_selectedBugInstId != null && _selectedBugInstId!.trim().isNotEmpty) {
-      bug = _selectedBugInstId!.trim();
-    } else {
-      bug = _bugController.text.trim(); // 可能是 ''，OK
+    if (_selectedFarmIds.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請先選擇至少一個作物代碼')));
+      return;
     }
-  }
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => BugListPage(
-        farmParam: farmParam,
-        bug: bug,
+    final farmParam = _selectedFarmIds.join(',');
+    final cropName = _farmList
+        .whereType<Map>()
+        .where(
+          (farm) =>
+              _selectedFarmIds.contains(farm['farmid']?.toString().trim()),
+        )
+        .map((farm) => farm['farmna']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .join('、');
+
+    // ✅ Switch 關掉：bug 一律帶空字串 ''
+    String bug = '';
+    if (_enableBugSearch) {
+      // ✅ Switch 開啟：優先用「選到的 instid」，沒選就用輸入框文字（允許空字串）
+      if (_selectedBugInstId != null && _selectedBugInstId!.trim().isNotEmpty) {
+        bug = _selectedBugInstId!.trim();
+      } else {
+        bug = _bugController.text.trim(); // 可能是 ''，OK
+      }
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => BugListPage(
+              farmParam: farmParam,
+              bug: bug,
+              cropName: cropName,
+              bugName:
+                  _enableBugSearch
+                      ? (_selectedBugName ?? _bugController.text.trim())
+                      : '',
+            ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,25 +324,34 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   onPressed: _loadingFarms ? null : _searchFarms,
-                  child: _loadingFarms
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child:
+                      _loadingFarms
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                          : const Text(
+                            '查詢',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
-                        )
-                      : const Text(
-                          '查詢',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                        ),
                 ),
               ],
             ),
@@ -338,145 +363,166 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
 
   // ✅ 2. 病蟲查詢（按查詢->跳出單選）
   Widget _buildBugInputSection() {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.bug_report, size: 20, color: _primaryColor),
-              const SizedBox(width: 6),
-              const Expanded(
-                child: Text(
-                  '2. 查詢病蟲害關鍵字',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Switch(
-                value: _enableBugSearch,
-                onChanged: (v) {
-                  setState(() {
-                    _enableBugSearch = v;
-                    if (!v) {
-                      _selectedBugName = null;
-                      _selectedBugInstId = null;
-                      _bugList = [];
-                      _loadingBugs = false;
-                    }
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _enableBugSearch ? '已開啟：可查詢並單選病蟲' : '未開啟：將直接使用輸入的病蟲文字（可不查）',
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 12),
-
-          // ✅ 這裡改成 if/else 兩段，不要 return
-          if (!_enableBugSearch) ...[
-            TextField(
-              controller: _bugController,
-              decoration: InputDecoration(
-                labelText: '病蟲文字（不查也可用），例如：炭疽病',
-                prefixIcon: const Icon(Icons.medical_information_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                filled: true,
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '提示：若不查詢，下一步會直接用上面文字進入病蟲清單。',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-          ] else ...[
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _bugController,
-                    decoration: InputDecoration(
-                      labelText: '病蟲關鍵字，例如：炭疽病',
-                      prefixIcon: const Icon(Icons.medical_information_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      filled: true,
-                      isDense: true,
+                const Icon(Icons.bug_report, size: 20, color: _primaryColor),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    '2. 查詢病蟲害關鍵字',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Switch(
+                  value: _enableBugSearch,
+                  onChanged: (v) {
+                    setState(() {
+                      _enableBugSearch = v;
+                      if (!v) {
+                        _selectedBugName = null;
+                        _selectedBugInstId = null;
+                        _bugList = [];
+                        _loadingBugs = false;
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _enableBugSearch ? '已開啟：可查詢並單選病蟲' : '未開啟：依作物查詢所有相關用藥資料',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ 這裡改成 if/else 兩段，不要 return
+            if (!_enableBugSearch) ...[
+              TextField(
+                controller: _bugController,
+                decoration: InputDecoration(
+                  labelText: '病蟲文字（不查也可用），例如：炭疽病',
+                  prefixIcon: const Icon(Icons.medical_information_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  filled: true,
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '提示：未勾選病蟲查詢時，會列出此作物所有相關病蟲的用藥資料。',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _bugController,
+                      decoration: InputDecoration(
+                        labelText: '病蟲關鍵字，例如：炭疽病',
+                        prefixIcon: const Icon(
+                          Icons.medical_information_outlined,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        isDense: true,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: _loadingBugs ? null : _searchBugsAndPickOne,
+                    child:
+                        _loadingBugs
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : const Text(
+                              '查詢',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                   ),
-                  onPressed: _loadingBugs ? null : _searchBugsAndPickOne,
-                  child: _loadingBugs
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          '查詢',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                        ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.check_circle_outline, size: 18, color: Colors.black54),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _selectedBugName == null
-                        ? '尚未選擇病蟲（可直接按下一步，不一定要選）'
-                        : '已選擇：$_selectedBugName'
-                            '${_selectedBugInstId == null ? '' : '（${_selectedBugInstId}）'}',
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: Colors.black54,
                   ),
-                ),
-                // if (_selectedBugName != null)
-                //   TextButton(
-                //     onPressed: () {
-                //       setState(() {
-                //         _selectedBugName = null;
-                //         _selectedBugInstId = null;
-                //       });
-                //     },
-                //     child: const Text('清除'),
-                //   ),
-              ],
-            ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _selectedBugName == null
+                          ? '尚未選擇病蟲（可直接按下一步，不一定要選）'
+                          : '已選擇：$_selectedBugName'
+                              '${_selectedBugInstId == null ? '' : '（${_selectedBugInstId}）'}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                  // if (_selectedBugName != null)
+                  //   TextButton(
+                  //     onPressed: () {
+                  //       setState(() {
+                  //         _selectedBugName = null;
+                  //         _selectedBugInstId = null;
+                  //       });
+                  //     },
+                  //     child: const Text('清除'),
+                  //   ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildFarmListSection() {
     if (_loadingFarms) return const SizedBox.shrink();
     if (_farmList.isEmpty) {
       return const Padding(
         padding: EdgeInsets.only(top: 4.0),
-        child: Text(
-          '尚未查詢或查無作物代碼。',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: Text('尚未查詢或查無作物代碼。', style: TextStyle(color: Colors.grey)),
       );
     }
 
@@ -507,7 +553,10 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(999),
@@ -542,8 +591,14 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
                     }
                   });
                 },
-                title: Text(farmna, style: const TextStyle(fontWeight: FontWeight.w500)),
-                subtitle: Text(farmid, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                title: Text(
+                  farmna,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(
+                  farmid,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
                 controlAffinity: ListTileControlAffinity.leading,
                 dense: true,
                 contentPadding: EdgeInsets.zero,
@@ -555,12 +610,20 @@ class _CropDiseaseQueryPageState extends State<CropDiseaseQueryPage> {
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: _primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
                 onPressed: _searchBugList,
                 icon: const Icon(Icons.medication_outlined, size: 18),
-                label: const Text('查詢病蟲清單', style: TextStyle(fontWeight: FontWeight.w600)),
+                label: const Text(
+                  '查詢用藥資料',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],

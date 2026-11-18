@@ -414,7 +414,7 @@
     },
     {
       "name": "DiseaseAzaiApiService",
-      "description": "Uses DISEASE_API_BASE_URL (the app falls back to http://61.216.142.83:10000). Set diseaseApiBaseUrl to the intended service origin.",
+      "description": "The app resolves DISEASE_API_BASE_URL, then DISEASE_API_URL, then http://61.216.142.83:10000. Set diseaseApiBaseUrl to the intended service origin for Postman requests.",
       "item": [
         {
           "name": "searchAzaiBugs",
