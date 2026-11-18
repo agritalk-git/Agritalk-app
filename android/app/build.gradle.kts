@@ -36,7 +36,7 @@ android {
     defaultConfig {
         applicationId = "com.agritalk.chcg_iot_app"
         minSdk = 24
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
